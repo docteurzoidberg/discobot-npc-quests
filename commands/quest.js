@@ -42,7 +42,8 @@ const commands = new SlashCommandBuilder()
         option
           .setName('id')
           .setDescription('ID de la quête')
-          .setRequired(true))
+          .setRequired(true)
+          .setAutocomplete(true))
       .addStringOption(option =>
         option
           .setName('title')
@@ -71,7 +72,8 @@ const commands = new SlashCommandBuilder()
         option
           .setName('id')
           .setDescription('ID de la quête')	
-          .setRequired(true)))
+          .setRequired(true)
+          .setAutocomplete(true)))
 
   //list
   .addSubcommand(subcommand =>
@@ -92,7 +94,8 @@ const commands = new SlashCommandBuilder()
         option
           .setName('id')
           .setDescription('ID de la quête')
-          .setRequired(true)));
+          .setRequired(true)
+          .setAutocomplete(true)));
 
 
 const shiftCharCode = Δ => c => String.fromCharCode(c.charCodeAt(0) + Δ);
@@ -226,6 +229,11 @@ async function complete(client, interaction) {
   }
 }
 
+async function getAllQuestIds() {
+  const quests = await api.getChannelQuests();
+  return quests.map(quest => quest.id);
+}
+
 module.exports = {
 	data: commands,
   async execute(client, interaction) {
@@ -247,5 +255,20 @@ module.exports = {
         interaction.reply({content: `Désolé mais, la commande ${subcommand} n'existe pas ou n'est pas encore implementée :(`, ephemeral: true});
         break;
     }
+  },
+  async autocomplete(client, interaction) {
+		const focusedOption = interaction.options.getFocused(true);
+    let choices = [];
+    switch(focusedOption.name) {
+      case 'id':
+        choices = await getAllQuestIds(client, interaction);
+        break;
+      default:
+        break;
+    }
+		const filtered = choices.filter(choice => choice.startsWith(focusedOption.value));
+		await interaction.respond(
+			filtered.map(choice => ({ name: choice, value: choice })),
+		);
   }
 };
