@@ -1,0 +1,39 @@
+version: "3"
+networks:
+  npc-quests:
+
+services:
+  api:
+    image: npc-quests-api
+    hostname: npc-quests-api
+    container_name: npc-quests-api
+    tty: true
+    build:
+      context: ./www-api
+    environment:
+      - DATA_PATH=/data
+    networks:
+      - npc-quests
+    volumes:
+      - ./www-api/data:/data
+    restart: unless-stopped
+
+  bot:
+    image: npc-quests-bot
+    hostname: npc-quests-bot
+    container_name: npc-quests-bot
+    tty: true
+    build:
+      context: ./bot-quests
+    env_file:
+      - ./bot-achievements/.env
+    environment:
+      #overide api url in env file to use the docker container
+      - API_URL=http://npc-quests-api:5000/quest
+    networks:
+      - npc-quests
+    volumes:
+      - ./bot-quests/data:/data
+    depends_on:
+      - api
+    restart: unless-stopped
