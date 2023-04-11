@@ -92,14 +92,14 @@ const logger = require('pino-http')({
 });
 
 const middlewares = require('./middlewares/common');
-const achievements = require('./routes/achievements');
+const quests = require('./routes/quests');
 
 const api_port = process.env.API_PORT || 5000;
 const hostname = process.env.HOSTNAME || 'localhost';
 const datapath = process.env.DATA_PATH || './data';
 
-if (!fs.existsSync(datapath + '/achievements'))
-  fs.mkdirSync(datapath + '/achievements');
+if (!fs.existsSync(datapath + '/quests'))
+  fs.mkdirSync(datapath + '/quests');
 
 const app = express();
 app.use(logger);
@@ -117,11 +117,11 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
 app.get('/', middlewares.noIndexHandler);
-app.use('/achievement', achievements);
+app.use('/quest', quests);
 app.use(middlewares.errorHandler);
 
 app.listen(api_port, () =>
   pino().info(
-    `npc-achievements-internal-api listening on port http://${hostname}:${api_port}/ !`
+    `npc-quests-internal-api listening on port http://${hostname}:${api_port}/ !`
   )
 );
