@@ -1,12 +1,15 @@
 module.exports = {
   name: 'interactionCreate',
   async execute(client, interaction) {
-    console.log(
-      `${interaction.user.tag} in #${interaction.channel.name} triggered an interaction.`
+    //log interaction
+    const type = interaction.isCommand() ? 'a command' : 'an autocomplete';
+    client.logger.debug(
+      `${interaction.user.tag} in #${interaction.channel.name} triggered ${type} interaction.`
     );
-    if (interaction.isCommand()) {
-      console.log('command: ' + interaction.commandName);
 
+    //commands
+    if (interaction.isCommand()) {
+      //client.logger.debug('command: ' + interaction.commandName);
       //await interaction.deferReply({ephemeral: false}).catch(()=>{});
       const command = client.commands.get(interaction.commandName);
       if (!command) return;
@@ -14,21 +17,25 @@ module.exports = {
       try {
         await command.execute(client, interaction);
       } catch (error) {
-        console.error(error);
+        client.logger.error(error);
+        client.logger.debug(error.stack);
         await interaction.reply({
           content: 'There was an error while executing this command!',
           ephemeral: true,
         });
       }
-    } else if (interaction.isAutocomplete()) {
-      console.log('autocomplete: ' + interaction.commandName);
+    }
+    //command's autocomplete
+    else if (interaction.isAutocomplete()) {
+      //client.logger.debug('autocomplete: ' + interaction.commandName);
       const command = client.commands.get(interaction.commandName);
       if (!command) return;
       if (!command.autocomplete) return;
       try {
         await command.autocomplete(client, interaction);
       } catch (error) {
-        console.error(error);
+        client.logger.error(error);
+        client.logger.debug(error.stack);
         //await interaction.reply({ content: 'There was an error while executing autocomplete for this command!', ephemeral: true });
       }
     }

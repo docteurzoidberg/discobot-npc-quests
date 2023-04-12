@@ -1,212 +1,115 @@
-/* express middleware for all methods of lib/achievements.js */
+/* express middleware for all methods of lib/quests.js */
 
-const achievementsApi = require('../lib/achievements');
+//TODO: write wrapper for all quest api methods
+/*
+  getChannelQuestById
+  addChannelQuest
+  updateChannelQuest
+  deleteChannelQuest
+  completeChannelQuest
+  uncompleteChannelQuest
+  undeleteChannelQuest
+  addTagToChannelQuest
+  removeTagFromChannelQuest
+  getChannelPublicQuests
+  getChannelQuests
+*/
 
-async function getUsers(req, res) {
-  const users = await achievementsApi.getUsers();
-  return res.status(200).json(users);
-}
+const questsdb = require('../lib/quests');
 
-async function getUserAchievementById(req, res) {
-  const { userId, achievementId } = req.params;
-  if (!userId) return res.status(400).json({ error: 'userId is required' });
-  if (!achievementId)
-    return res.status(400).json({ error: 'achievementId is required' });
+const getChannelQuestById = async (req, res) => {
+  const { channelId, questId } = req.params;
+  const quest = await questsdb.getChannelQuestById(channelId, questId);
+  if (!quest) return res.status(404).send('Quest not found');
+  res.json(quest);
+};
 
-  const achievement = await achievementsApi.getUserAchievementById(
-    userId,
-    achievementId
+const addChannelQuest = async (req, res) => {
+  const { channelId, questId } = req.params;
+  const questObject = req.body;
+  const quest = await questsdb.addChannelQuest(channelId, questId, questObject);
+  res.json(quest);
+};
+
+const updateChannelQuest = async (req, res) => {
+  const { channelId, questId } = req.params;
+  const questObject = req.body;
+  const quest = await questsdb.updateChannelQuest(
+    channelId,
+    questId,
+    questObject
   );
-  return res.status(200).json(achievement);
-}
+  res.json(quest);
+};
 
-async function getUserAchievements(req, res) {
-  const { userId } = req.params;
-  if (!userId) return res.status(400).json({ error: 'userId is required' });
-  const achievements = await achievementsApi.getUserAchievements(userId);
-  return res.status(200).json(achievements);
-}
+const deleteChannelQuest = async (req, res) => {
+  const { channelId, questId } = req.params;
+  const quest = await questsdb.deleteChannelQuest(channelId, questId);
+  res.json(quest);
+};
 
-async function getUserPublicAchievements(req, res) {
-  const { userId } = req.params;
-  if (!userId) return res.status(400).json({ error: 'userId is required' });
+const completeChannelQuest = async (req, res) => {
+  const { channelId, questId } = req.params;
+  const quest = await questsdb.completeChannelQuest(channelId, questId);
+  res.json(quest);
+};
 
-  const achievements = await achievementsApi.getUserPublicAchievements(userId);
-  return res.status(200).json(achievements);
-}
+const uncompleteChannelQuest = async (req, res) => {
+  const { channelId, questId } = req.params;
+  const quest = await questsdb.uncompleteChannelQuest(channelId, questId);
+  res.json(quest);
+};
 
-async function getUserSettings(req, res) {
-  const { userId } = req.params;
-  if (!userId) return res.status(400).json({ error: 'userId is required' });
+const undeleteChannelQuest = async (req, res) => {
+  const { channelId, questId } = req.params;
+  const quest = await questsdb.undeleteChannelQuest(channelId, questId);
+  res.json(quest);
+};
 
-  const settings = await achievementsApi.getUserSettings(userId);
-  return res.status(200).json(settings);
-}
-
-async function updateUserSettings(req, res) {
-  const { userId } = req.params;
-  if (!userId) return res.status(400).json({ error: 'userId is required' });
-  const settings = req.body;
-  if (!settings)
-    return res.status(400).json({ error: 'settings are required' });
-  const savedSettings = await achievementsApi.updateUserSettings(
-    userId,
-    settings
-  );
-  return res.status(200).json(savedSettings);
-}
-
-async function addUserAchievement(req, res) {
-  const { userId } = req.params;
-  if (!userId) return res.status(400).json({ error: 'userId is required' });
-
-  const achievement = req.body;
-  if (!achievement)
-    return res.status(400).json({ error: 'achievement is required' });
-
-  const addedAchievement = await achievementsApi.addUserAchievement(
-    userId,
-    achievement
-  );
-  return res.status(200).json(addedAchievement);
-}
-
-async function updateUserAchievement(req, res) {
-  const { userId, achievementId } = req.params;
-  if (!userId) return res.status(400).json({ error: 'userId is required' });
-  if (!achievementId)
-    return res.status(400).json({ error: 'achievementId is required' });
-
-  const achievement = req.body;
-  //TODO: validate achievement
-  if (!achievement)
-    return res.status(400).json({ error: 'achievement is required' });
-
-  const updatedAchievement = await achievementsApi.updateUserAchievement(
-    userId,
-    achievement
-  );
-  return res.status(200).json(updatedAchievement);
-}
-
-async function completeUserAchievement(req, res) {
-  const { userId, achievementId } = req.params;
-  if (!userId) return res.status(400).json({ error: 'userId is required' });
-  if (!achievementId)
-    return res.status(400).json({ error: 'achievementId is required' });
-  const achievement = await achievementsApi.completeUserAchievement(
-    userId,
-    achievementId
-  );
-  return res.status(200).json(achievement);
-}
-
-async function uncompleteUserAchievement(req, res) {
-  const { userId, achievementId } = req.params;
-  if (!userId) return res.status(400).json({ error: 'userId is required' });
-  if (!achievementId)
-    return res.status(400).json({ error: 'achievementId is required' });
-
-  const achievement = await achievementsApi.uncompleteUserAchievement(
-    userId,
-    achievementId
-  );
-  return res.status(200).json(achievement);
-}
-
-async function deleteUserAchievement(req, res) {
-  const { userId, achievementId } = req.params;
-  if (!userId) return res.status(400).json({ error: 'userId is required' });
-  if (!achievementId)
-    return res.status(400).json({ error: 'achievementId is required' });
-
-  const achievement = await achievementsApi.deleteUserAchievement(
-    userId,
-    achievementId
-  );
-  return res.status(200).json(achievement);
-}
-
-async function undeleteUserAchievement(req, res) {
-  const { userId, achievementId } = req.params;
-  if (!userId) return res.status(400).json({ error: 'userId is required' });
-  if (!achievementId)
-    return res.status(400).json({ error: 'achievementId is required' });
-
-  const achievement = await achievementsApi.undeleteUserAchievement(
-    userId,
-    achievementId
-  );
-  return res.status(200).json(achievement);
-}
-
-//body contains: { tag: 'tagname' }
-async function addTagToUserAchievement(req, res) {
-  const { userId, achievementId } = req.params;
+const addTagToChannelQuest = async (req, res) => {
+  const { channelId, questId } = req.params;
   const tag = req.body.tag;
+  const quest = await questsdb.addTagToChannelQuest(channelId, questId, tag);
+  res.json(quest);
+};
 
-  console.log('addTagToUserAchievement', userId, achievementId, tag);
-
-  if (!userId) return res.status(400).json({ error: 'userId is required' });
-  if (!achievementId)
-    return res.status(400).json({ error: 'achievementId is required' });
-  if (!req.body.tag) return res.status(400).json({ error: 'tag is required' });
-
-  const updatedAchievement = await achievementsApi.addTagToUserAchievement(
-    userId,
-    achievementId,
+const removeTagFromChannelQuest = async (req, res) => {
+  const { channelId, questId } = req.params;
+  const tag = req.body.tag;
+  const quest = await questsdb.removeTagFromChannelQuest(
+    channelId,
+    questId,
     tag
   );
-  return res.status(200).json(updatedAchievement);
-}
+  res.json(quest);
+};
 
-//body contains: { tag: 'tagname' }
-async function removeTagFromUserAchievement(req, res) {
-  const { userId, achievementId } = req.params;
-  const tag = req.body.tag;
+const getChannelPublicQuests = async (req, res) => {
+  const { channelId } = req.params;
+  const quests = await questsdb.getChannelPublicQuests(channelId);
+  res.json(quests);
+};
 
-  if (!userId) return res.status(400).json({ error: 'userId is required' });
-  if (!achievementId)
-    return res.status(400).json({ error: 'achievementId is required' });
-  if (!req.body.tag) return res.status(400).json({ error: 'tag is required' });
-
-  const updatedAchievement = await achievementsApi.removeTagFromUserAchievement(
-    userId,
-    achievementId,
-    tag
-  );
-  return res.status(200).json(updatedAchievement);
-}
+const getChannelQuests = async (req, res) => {
+  const { channelId } = req.params;
+  const quests = await questsdb.getChannelQuests(channelId);
+  res.json(quests);
+};
 
 const router = require('express').Router();
-router.get('/users', getUsers);
-router.get('/:userId/achievements/:achievementId', getUserAchievementById);
-router.get('/:userId/publicachievements', getUserPublicAchievements);
-router.get('/:userId/achievements', getUserAchievements);
-router.get('/:userId/settings', getUserSettings);
-router.put('/:userId/settings', updateUserSettings);
-router.post('/:userId/achievements', addUserAchievement);
-router.put('/:userId/achievements/:achievementId', updateUserAchievement);
-router.put(
-  '/:userId/achievements/:achievementId/complete',
-  completeUserAchievement
-);
-router.put(
-  '/:userId/achievements/:achievementId/uncomplete',
-  uncompleteUserAchievement
-);
-router.delete('/:userId/achievements/:achievementId', deleteUserAchievement);
-router.put(
-  '/:userId/achievements/:achievementId/undelete',
-  undeleteUserAchievement
-);
-router.post(
-  '/:userId/achievements/:achievementId/tags',
-  addTagToUserAchievement
-);
-router.delete(
-  '/:userId/achievements/:achievementId/tags',
-  removeTagFromUserAchievement
-);
+
+router.get('/:channelId/:questId', getChannelQuestById);
+router.post('/:channelId/:questId', addChannelQuest);
+router.put('/:channelId/:questId', updateChannelQuest);
+router.delete('/:channelId/:questId', deleteChannelQuest);
+
+router.put('/:channelId/:questId/complete', completeChannelQuest);
+router.put('/:channelId/:questId/uncomplete', uncompleteChannelQuest);
+router.put('/:channelId/:questId/undelete', undeleteChannelQuest);
+router.post('/:channelId/:questId/tag', addTagToChannelQuest);
+router.delete('/:channelId/:questId/tag', removeTagFromChannelQuest);
+
+router.get('/:channelId/public', getChannelPublicQuests);
+router.get('/:channelId', getChannelQuests);
 
 module.exports = router;

@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ path: '../.env' });
 
 const fs = require('fs');
 const express = require('express');
@@ -93,13 +93,14 @@ const logger = require('pino-http')({
 
 const middlewares = require('./middlewares/common');
 const quests = require('./routes/quests');
+const channels = require('./routes/channels');
+const users = require('./routes/users');
 
 const api_port = process.env.API_PORT || 5000;
 const hostname = process.env.HOSTNAME || 'localhost';
 const datapath = process.env.DATA_PATH || './data';
 
-if (!fs.existsSync(datapath + '/quests'))
-  fs.mkdirSync(datapath + '/quests');
+if (!fs.existsSync(datapath + '/quests')) fs.mkdirSync(datapath + '/quests');
 
 const app = express();
 app.use(logger);
@@ -117,7 +118,9 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
 app.get('/', middlewares.noIndexHandler);
-app.use('/quest', quests);
+app.use('/quests', quests);
+app.use('/channels', channels);
+app.use('/users', users);
 app.use(middlewares.errorHandler);
 
 app.listen(api_port, () =>
