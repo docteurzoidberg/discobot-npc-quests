@@ -143,6 +143,148 @@ const commands = new SlashCommandBuilder()
           .setRequired(true)
           .setAutocomplete(true)
       )
+  )
+
+  // tags
+  .addSubcommandGroup((group) =>
+    group
+      .setName('tag')
+      .setDescription('Gestion des tags/catégories')
+
+      // add tag
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName('add')
+          .setDescription('Ajout un tag/catégorie a une quête')
+          .addStringOption((option) =>
+            option
+              .setName('id')
+              .setDescription('ID de la quête')
+              .setRequired(true)
+              .setAutocomplete(true)
+          )
+          .addStringOption((option) =>
+            option
+              .setName('tag')
+              .setDescription('Tag/catégorie')
+              .setRequired(true)
+              .setAutocomplete(true)
+          )
+      )
+
+      // remove tag
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName('remove')
+          .setDescription("Supprime un tag/catégorie d'une quête")
+          .addStringOption((option) =>
+            option
+              .setName('id')
+              .setDescription('ID de la quête')
+              .setRequired(true)
+              .setAutocomplete(true)
+          )
+          .addStringOption((option) =>
+            option
+              .setName('tag')
+              .setDescription('Tag/catégorie')
+              .setRequired(true)
+              .setAutocomplete(true)
+          )
+      )
+
+      // list tags
+      .addSubcommand((subcommand) =>
+        subcommand.setName('list').setDescription('Liste les tags/catégories')
+      )
+  )
+
+  // settings
+  .addSubcommandGroup((group) =>
+    group
+      .setName('settings')
+      .setDescription('Gestion des paramètres')
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName('list')
+          .setDescription('Affiche les paramètres utilisateur')
+      )
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName('announce_create')
+          .setDescription(
+            "Active/désactive l'annonce de création de quête publique"
+          )
+          .addBooleanOption((option) =>
+            option.setName('value').setDescription('Valeur')
+          )
+      )
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName('announce_update')
+          .setDescription(
+            "Active/désactive l'annonce de modification de quête publique"
+          )
+          .addBooleanOption((option) =>
+            option.setName('value').setDescription('Valeur')
+          )
+      )
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName('announce_complete')
+          .setDescription(
+            "Active/désactive l'annonce de validation de quête publique"
+          )
+          .addBooleanOption((option) =>
+            option.setName('value').setDescription('Valeur')
+          )
+      )
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName('announce_undone')
+          .setDescription(
+            "Active/désactive l'annonce d'annulation de validation de quête publique"
+          )
+          .addBooleanOption((option) =>
+            option.setName('value').setDescription('Valeur')
+          )
+      )
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName('announce_delete')
+          .setDescription(
+            "Active/désactive l'annonce de suppression de quête publique"
+          )
+          .addBooleanOption((option) =>
+            option.setName('value').setDescription('Valeur')
+          )
+      )
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName('announce_undelete')
+          .setDescription(
+            "Active/désactive l'annonce d'annulation de suppression de quête publique"
+          )
+          .addBooleanOption((option) =>
+            option.setName('value').setDescription('Valeur')
+          )
+      )
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName('public_name')
+          .setDescription('Définir le nom affiché hors discord')
+          .addStringOption((option) =>
+            option.setName('value').setDescription('Valeur')
+          )
+      )
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName('public_avatar')
+          .setDescription("Définir l'avatar affiché hors discord")
+          .addStringOption((option) =>
+            option.setName('value').setDescription('Valeur')
+          )
+      )
   );
 
 const shiftCharCode = (Δ) => (c) => String.fromCharCode(c.charCodeAt(0) + Δ);
@@ -540,30 +682,56 @@ module.exports = {
               content: `Désolé mais, la commande ${subcommand} n'existe pas ou n'est pas encore implementée :(`,
               ephemeral: true,
             });
-            break;
         }
-        break;
+        return;
       case 'tag':
         switch (subcommand) {
           case 'add':
-            return await commandAddTag(client, interaction);
+            return await commandTaggAdd(client, interaction);
           case 'remove':
-            return await commandRemoveTag(client, interaction);
+            return await commandTagRemove(client, interaction);
           case 'list':
-            return await commandListTags(client, interaction);
+            return await commandTagList(client, interaction);
           default:
             interaction.reply({
-              content: `Désolé mais, la commande ${subcommand} n'existe pas ou n'est pas encore implementée :(`,
+              content: `Désolé mais, la commande ${commandgroup} ${subcommand} n'existe pas ou n'est pas encore implementée :(`,
               ephemeral: true,
             });
-            break;
         }
+        return;
+      case 'settings':
+        switch (subcommand) {
+          case 'list':
+            return await commandSettingsList(client, interaction);
+          case 'announe_create':
+            return await commandSettingsAnnounceCreate(client, interaction);
+          case 'announe_update':
+            return await commandSettingsAnnounceUpdate(client, interaction);
+          case 'announe_complete':
+            return await commandSettingsAnnounceComplete(client, interaction);
+          case 'announe_delete':
+            return await commandSettingsAnnounceDelete(client, interaction);
+          case 'announe_undelete':
+            return await commandSettingsAnnounceUndelete(client, interaction);
+          case 'announe_uncomplete':
+            return await commandSettingsAnnounceUncomplete(client, interaction);
+          case 'public_name':
+            return await commandSettingsPublicName(client, interaction);
+          case 'public_avatar':
+            return await commandSettingsPublicAvatar(client, interaction);
+          default:
+            interaction.reply({
+              content: `Désolé mais, la commande ${commandgroup} ${subcommand} n'existe pas ou n'est pas encore implementée :(`,
+              ephemeral: true,
+            });
+        }
+        return;
       default:
         interaction.reply({
           content: `Désolé mais, le groupe de commande ${commandgroup} n'existe pas ou n'est pas encore implementée :(`,
           ephemeral: true,
         });
-        break;
+        return;
     }
   },
   async autocomplete(client, interaction) {
