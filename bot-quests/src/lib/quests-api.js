@@ -29,7 +29,7 @@ async function createChannelQuest(channelId, quest) {
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(quest),
+    body: JSON.stringify({ quest: quest }),
   });
   if (response.ok) {
     return await response.json();

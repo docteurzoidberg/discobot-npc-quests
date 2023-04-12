@@ -10,7 +10,7 @@ const commands = new SlashCommandBuilder()
   //add
   .addSubcommand((subcommand) =>
     subcommand
-      .setName('add')
+      .setName('create')
       .setDescription('Ajouter une quête')
       .addStringOption((option) =>
         option
@@ -78,7 +78,27 @@ const commands = new SlashCommandBuilder()
       .setName('list')
       .setDescription('Lister les quêtes du channel/thread')
       .addStringOption((option) =>
-        option.setName('user').setDescription('Nom du joueur')
+        option
+          .setName('user')
+          .setDescription('Filter par nom du joueur')
+          .setRequired(false)
+          .setAutocomplete(true)
+      )
+      .addStringOption((option) =>
+        option
+          .setName('tag')
+          .setDescription('Filtrer par tag/catégorie')
+          .setRequired(false)
+          .setAutocomplete(true)
+      )
+      .addStringOption((option) =>
+        option
+          .setName('channel')
+          .setDescription(
+            'Choisir un autre channel/thread que celui de la commande'
+          )
+          .setRequired(false)
+          .setAutocomplete(true)
       )
   )
 
@@ -315,6 +335,7 @@ const separatorLine = '----------------------------------------';
 
 function _preventEmbed(url) {
   //add <> to urls to prevent embed
+  if (!url || url === '') return '';
   return url.replace(/(https?:\/\/[^\s]+)/g, '<$1>');
 }
 
@@ -359,14 +380,21 @@ function _formatQuestEmbed(quest) {
   let players = quest.players || [];
   let points = quest.points || 0;
   //TODO
-  return new EmbedBuilder()
+
+  //set thumbnail to image if image is set only
+  let msgEmbed = new EmbedBuilder()
     .setTitle(title)
     .setDescription(description)
-    .setThumbnail(image)
-    .addField('Donne', give, true)
-    .addField('Points', points, true)
-    .addField('Joueurs', players.join(', '), true)
-    .setFooter('Quête ajoutée par ' + quest.author);
+    //.addField('Donne', give, true)
+    //.addField('Points', points, true)
+    //.addField('Joueurs', players.join(', '), true)
+    .setFooter({ text: 'ID: ' + quest.id });
+
+  if (image !== '') {
+    msgEmbed.setImage(image);
+  }
+
+  return msgEmbed;
 }
 
 function _formatAutocompleteQuest(quest) {
@@ -393,6 +421,7 @@ async function commandAdd(client, interaction) {
   const description = interaction.options.getString('description');
   const image = interaction.options.getString('icon') || '';
   const give = interaction.options.getString('give') || '';
+  const private = interaction.options.getBoolean('private') || false;
 
   //TODO: validation ?
   const quest = {
@@ -403,11 +432,12 @@ async function commandAdd(client, interaction) {
     private: private,
     players: [...userName],
   };
+
   try {
     client.logger.info(
       `Ajout d'une quête [${title}] dans #${channelName} par @${userName}`
     );
-    const newQuest = await api.addChannelQuest(channelId, quest);
+    const newQuest = await api.createChannelQuest(channelId, quest);
     client.logger.debug(newQuest);
     interaction.reply({
       content: `Quête [${quest.title}] ajoutée ! (ID: ${newQuest.id})`,
@@ -464,14 +494,14 @@ async function commandShow(client, interaction, ephemeral = true) {
       `Affichage de la quête [${id}] dans #${channelName} par @${userName} ` +
         (ephemeral === true ? '(en privé)' : '(en public)')
     );
-    const quest = await api.getChannelQuest(channelId, id);
+    const quest = await api.getChannelQuestById(channelId, id);
     client.logger.debug(quest);
     let msg = _formatQuestMessage(quest);
     let embed = _formatQuestEmbed(quest);
     interaction.reply({
       content: msg,
-      embed: embed,
-      ephemeral: ephemeral !== true,
+      embeds: [embed],
+      ephemeral: ephemeral === true,
     });
   } catch (error) {
     client.logger.error(
@@ -655,7 +685,7 @@ module.exports = {
     switch (commandgroup) {
       case null:
         switch (subcommand) {
-          case 'add':
+          case 'create':
             return await commandAdd(client, interaction);
           case 'update':
             return await commandUpdate(client, interaction);

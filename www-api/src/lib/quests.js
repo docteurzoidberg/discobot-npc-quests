@@ -50,7 +50,7 @@ const _checkQuestId = (questId) => {
 const _checkQuestObject = (questObject) => {
   if (!questObject) throw new Error('No questObject provided');
   if (!questObject.quest) throw new Error('No questObject.quest provided');
-  _checkQuest(questObject.quest);
+  //_checkQuest(questObject.quest);
 };
 
 const _checkTagObject = (tagObject) => {
@@ -89,8 +89,8 @@ function _generateID(index) {
 
 async function _getNextUnusedGlobalQuestId() {
   //list channels
-  const channels = await _getChannelsIds();
-  const channelIds = channels.map((channel) => channel.id);
+  const channelIds = await _getChannelsIds();
+  console.debug(channelIds);
 
   //for each channel load the database
   const channelDatabases = await Promise.all(
@@ -116,9 +116,9 @@ async function _getNextUnusedGlobalQuestId() {
 
 async function _getChannelsIds() {
   const channelFiles = fs.readdirSync(`${databasePath}/quests`);
-  return channelFiles.map((file) => {
-    file.replace('.json', '');
-  });
+  const channelIds = channelFiles.map((file) => file.replace('.json', ''));
+  //filter valid channel ids
+  return channelIds.filter((channelId) => channelId.match(/^[0-9]+$/));
 }
 
 async function _loadChannelDatabase(channelId) {
@@ -179,30 +179,26 @@ async function getChannelPublicQuests(channelId) {
   return db.quests;
 }
 
-async function addChannelQuest(channelId, quest) {
+async function addChannelQuest(channelId, questObject) {
   _checkChannelId(channelId);
-  _checkQuestObject(quest);
+  _checkQuestObject(questObject);
 
   const newId = await _getNextUnusedGlobalQuestId();
+  const newQuest = { ...questObject.quest, id: newId, dateCreated: new Date() };
+  _checkQuest(newQuest);
 
+  //TODO: check against all channels. not only this one
   const db = await _loadChannelDatabase(channelId);
   _checkChannelDatabase(db);
-
   db.quests.forEach((element) => {
     if (element.id.toLowerCase() === newId.toLowerCase()) {
       throw new Error(`Error adding quests: ${newId} already exists`);
     }
   });
 
-  const questBase = {
-    id: newId,
-    dateCreated: new Date(),
-  };
-
-  const newQuest = { ...questBase, ...quest };
-
   db.quests.push(newQuest);
   await _saveChannelDatabase(channelId, db);
+  return newQuest;
 }
 
 async function updateChannelQuest(channelId, quest) {
@@ -229,6 +225,7 @@ async function updateChannelQuest(channelId, quest) {
   //update database quest
   db.quests[found] = questUpdate;
   await _saveChannelDatabase(channelId, db);
+  return questUpdate;
 }
 
 async function completeChannelQuest(channelId, questId) {
@@ -252,6 +249,7 @@ async function completeChannelQuest(channelId, questId) {
   //update database quest
   db.quests[found] = quest;
   await _saveChannelDatabase(channelId, db);
+  return quest;
 }
 
 async function deleteChannelQuest(channelId, questId) {
@@ -275,6 +273,7 @@ async function deleteChannelQuest(channelId, questId) {
   //update database quest
   db.quests[found] = quest;
   await _saveChannelDatabase(channelId, db);
+  return quest;
 }
 
 async function addTagToChannelQuest(channelId, questId, tagObject) {

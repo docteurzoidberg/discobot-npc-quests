@@ -1,6 +1,6 @@
 require('dotenv').config({ path: __dirname + '/../.env' });
 
-const logger = require('pino')({ level: process.env.LOG_LEVEL || 'info' });
+const logger = require('pino')({ level: process.env.LOG_LEVEL || 'debug' });
 const fs = require('fs');
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v9');
