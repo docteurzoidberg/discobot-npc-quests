@@ -672,6 +672,105 @@ async function autocompleteGetAllQuestIds(client, interaction) {
   return quests.map((quest) => _formatAutocompleteQuest(quest));
 }
 
+async function autocompleteGetDeletableQuestIds(client, interaction) {
+  const quests = await api.getChannelQuests(interaction.channel.id);
+  //sort by most recent first
+  quests.sort((a, b) => {
+    return new Date(b.dateCreated) - new Date(a.dateCreated);
+  });
+  return quests
+    .filter((quest) => quest.dateDeleted === undefined)
+    .map((quest) => _formatAutocompleteQuest(quest));
+}
+
+async function autocompleteGetDeletedQuestIds(client, interaction) {
+  const quests = await api.getChannelQuests(interaction.channel.id);
+  //sort by most recent first
+  quests.sort((a, b) => {
+    return new Date(b.dateCreated) - new Date(a.dateCreated);
+  });
+  return quests
+    .filter((quest) => quest.dateDeleted !== undefined)
+    .map((quest) => _formatAutocompleteQuest(quest));
+}
+
+async function autocompleteGetCompletableQuestIds(client, interaction) {
+  const quests = await api.getChannelQuests(interaction.channel.id);
+  //sort by most recent first
+  quests.sort((a, b) => {
+    return new Date(b.dateCreated) - new Date(a.dateCreated);
+  });
+  return quests
+    .filter((quest) => quest.dateCompleted === undefined)
+    .map((quest) => _formatAutocompleteQuest(quest));
+}
+
+async function autocompleteGetCompletedQuestIds(client, interaction) {
+  const quests = await api.getChannelQuests(interaction.channel.id);
+  //sort by most recent first
+  quests.sort((a, b) => {
+    return new Date(b.dateCreated) - new Date(a.dateCreated);
+  });
+  return quests
+    .filter((quest) => quest.dateCompleted !== undefined)
+    .map((quest) => _formatAutocompleteQuest(quest));
+}
+
+function _formatAutocompleteChannel(channel) {
+  console.log(channel);
+  return {
+    name: `#${channel.name} (${channel.id})`,
+    value: channel.id,
+  };
+}
+
+//return all current interaction guild 's channels with at least one quest
+async function autocompleteGetAllChannelsWithQuests(client, interaction) {
+  //get current interaction guild 's channels list
+  const channels = client.channels.cache.filter(async (channel) => {
+    //get channel quests
+    const channelQuests = await api.getChannelQuests(channel.id);
+    //filter channels
+    return (
+      channel.type === 0 && //text channel
+      interaction.guild.id === channel.guildId && //same guild
+      channelQuests.length > 0 //at least one quest
+    );
+  });
+  return channels.map((channel) => _formatAutocompleteChannel(channel));
+}
+
+//return all current interaction guild 's channels
+async function autocompleteGetAllChannels(client, interaction) {
+  //get current interaction guild 's channels list
+  const channels = client.channels.cache.filter(async (channel) => {
+    //filter channels
+    return (
+      channel.type === 0 && //text channel
+      interaction.guild.id === channel.guildId //same guild
+    );
+  });
+  return channels.map((channel) => _formatAutocompleteChannel(channel));
+}
+
+function _formatAutocompleteUser(user) {
+  return {
+    name: user.username,
+    value: user.id,
+  };
+}
+
+async function autocompleteGetAllUsers(client, interaction) {
+  const users = client.users.cache;
+  return users.map(async (user) => {
+    //need fetch ?
+    if (user.partial) {
+      await user.fetch();
+    }
+    _formatAutocompleteUser(user);
+  });
+}
+
 module.exports = {
   data: commands,
   async execute(client, interaction) {
@@ -766,10 +865,38 @@ module.exports = {
   },
   async autocomplete(client, interaction) {
     const focusedOption = interaction.options.getFocused(true);
+    const subcommand = interaction.options.getSubcommand();
     let choices = [];
     switch (focusedOption.name) {
       case 'id':
-        choices = await autocompleteGetAllQuestIds(client, interaction);
+        if (subcommand === 'delete') {
+          choices = await autocompleteGetDeletableQuestIds(client, interaction);
+        } else if (subcommand === 'undelete') {
+          choices = await autocompleteGetDeletedQuestIds(client, interaction);
+        } else if (subcommand === 'complete') {
+          choices = await autocompleteGetCompletableQuestIds(
+            client,
+            interaction
+          );
+        } else if (subcommand === 'uncomplete') {
+          choices = await autocompleteGetCompletedQuestIds(client, interaction);
+        } else {
+          choices = await autocompleteGetAllQuestIds(client, interaction);
+        }
+        break;
+      case 'channel':
+        //check subcommand
+        if (subcommand === 'showlist' || subcommand === 'list') {
+          choices = await autocompleteGetAllChannelsWithQuests(
+            client,
+            interaction
+          );
+        } else {
+          choices = await autocompleteGetAllChannels(client, interaction);
+        }
+        break;
+      case 'user':
+        choices = await autocompleteGetAllUsers(client, interaction);
         break;
       default:
         break;
