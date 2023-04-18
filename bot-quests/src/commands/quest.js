@@ -368,8 +368,8 @@ function _formatQuestMessage(quest) {
 }
 
 function _formatQuestEmbed(quest) {
-  let title = quest.title || '';
-  let description = quest.description || '';
+  let title = quest.title || '*Sans titre*';
+  let description = quest.description || '*Aucune description*';
   let image = quest.image || '';
   let give = quest.give || '';
   let players = quest.players || [];
