@@ -2,7 +2,7 @@ require('dotenv').config();
 
 const fs = require('fs');
 
-const databasePath = process.env.DATABASE_PATH || './data';
+const databasePath = process.env.DATA_PATH || './data';
 
 const _checkQuest = (quest) => {
   if (!quest) throw new Error('No quest found');
