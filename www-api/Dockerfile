@@ -11,7 +11,6 @@ ENV DATA_PATH /data
 
 # Data volume
 RUN mkdir /data 
-RUN chown node:node /data
 
 # App directory
 WORKDIR /app
@@ -23,10 +22,7 @@ RUN npm install --omit=dev
 RUN npm install -g pino-pretty
 
 # Then app source
-COPY --chown=node:node . .
-
-# Run as node user
-USER node
+COPY . .
 
 EXPOSE 5000
 
