@@ -8,8 +8,8 @@ const notFoundHandler = (req, res) => {
 };
 
 const errorHandler = (err, req, res, next) => {
-  req.error(err);
-  req.debug(req.stack);
+  req.logger.error(err);
+  req.logger.debug(req.stack);
   res.status(500).send('Something broke!');
 };
 

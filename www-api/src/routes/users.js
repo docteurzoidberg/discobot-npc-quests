@@ -1,46 +1,31 @@
-const _checkUserId = (userId) => {
-  if (!userId) {
-    throw new Error('userId is required');
-  }
-  //should be numeric
-  if (isNaN(userId)) {
-    throw new Error('userId must be numeric');
-  }
-};
+const userdb = require('../lib/users');
 
-const _checkSettings = (settings) => {
-  if (!settings) {
-    throw new Error('settings is required');
-  }
-  //should be an object
-  if (typeof settings !== 'object') {
-    throw new Error('settings must be an object');
-  }
-};
-
-const getUsers = (req, res) => {
+const getUserIds = async (req, res) => {
   const { logger } = req;
   logger.info('getUsers');
-  res.json({ users: [] });
+  const users = await userdb.getUserIds();
+  res.json(users);
 };
 
-const getUserSettings = (req, res) => {
+const getUserSettings = async (req, res) => {
   const { logger } = req;
-  const { userId } = req.params;
-  logger.info('getUserSettings', { userId });
-  res.json({ settings: {} });
+  const userId = req.params.userId;
+  logger.info('getUserSettings', userId);
+  const userSettings = await userdb.getUserSettings(userId);
+  res.json(userSettings);
 };
 
-const updateUserSettings = (req, res) => {
+const setUserSettings = async (req, res) => {
   const { logger } = req;
   const { userId } = req.params;
   const settings = req.body;
   logger.info('updateUserSettings', { userId, settings });
-  res.json({ settings });
+  const savedSettings = userdb.setUserSettings(userId, settings);
+  res.json(savedSettings);
 };
 
 const router = require('express').Router();
-router.get('/', getUsers);
+//router.get('/', getUserIds);
 router.get('/:userId/settings', getUserSettings);
-router.put('/:userId/settings', updateUserSettings);
+router.put('/:userId/settings', setUserSettings);
 module.exports = router;

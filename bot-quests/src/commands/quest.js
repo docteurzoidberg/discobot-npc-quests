@@ -2,6 +2,7 @@ const { SlashCommandBuilder } = require('@discordjs/builders');
 const { EmbedBuilder } = require('discord.js');
 
 const api = require('../lib/quests-api');
+const helpers = require('../lib/discobot-helpers');
 
 const commands = new SlashCommandBuilder()
   .setName('quest')
@@ -58,11 +59,25 @@ const commands = new SlashCommandBuilder()
       )
   )
 
-  //rm
+  //delete
   .addSubcommand((subcommand) =>
     subcommand
       .setName('delete')
       .setDescription('Supprimer une quête de la liste')
+      .addStringOption((option) =>
+        option
+          .setName('id')
+          .setDescription('ID de la quête')
+          .setRequired(true)
+          .setAutocomplete(true)
+      )
+  )
+
+  //undelete
+  .addSubcommand((subcommand) =>
+    subcommand
+      .setName('undelete')
+      .setDescription("Annuler la suppression d'une quête")
       .addStringOption((option) =>
         option
           .setName('id')
@@ -261,7 +276,7 @@ const commands = new SlashCommandBuilder()
       )
       .addSubcommand((subcommand) =>
         subcommand
-          .setName('announce_undone')
+          .setName('announce_uncomplete')
           .setDescription(
             "Active/désactive l'annonce d'annulation de validation de quête publique"
           )
@@ -307,47 +322,21 @@ const commands = new SlashCommandBuilder()
       )
   );
 
-const shiftCharCode = (Δ) => (c) => String.fromCharCode(c.charCodeAt(0) + Δ);
-const toFullWidth = (str) => str.replace(/[!-~]/g, shiftCharCode(0xfee0));
-const toHalfWidth = (str) => str.replace(/[！-～]/g, shiftCharCode(-0xfee0));
-
-//return size of characters in string
-//full width characters (2 bytes) and half width characters (1 byte)
-const mbStrWidth = (input) => {
-  let len = 0;
-  for (let i = 0; i < input.length; i++) {
-    let code = input.charCodeAt(i);
-    if (
-      (code >= 0x0020 && code <= 0x1fff) ||
-      (code >= 0xff61 && code <= 0xff9f)
-    ) {
-      len += 1;
-    } else if ((code >= 0x2000 && code <= 0xff60) || code >= 0xffa0) {
-      len += 2;
-    } else {
-      len += 0;
-    }
-  }
-  return len;
-};
-
 const separatorLine = '----------------------------------------';
 
-function _preventEmbed(url) {
-  //add <> to urls to prevent embed
-  if (!url || url === '') return '';
-  return url.replace(/(https?:\/\/[^\s]+)/g, '<$1>');
-}
+const _formatTag = (tag) => `🏷*${tag.toLocaleUpperCase()}*`;
 
-function _formatTags(tags) {
-  return tags.map((tag) => `#${tag}`).join(' ');
-}
+const _formatTags = (tags) => {
+  return tags.map((tag) => _formatTag(tag)).join(' ');
+};
 
-function _formatQuestListItem(quest) {
+const _formatQuestId = (questId) => {
+  return `**${helpers.toFullWidthString(questId)}**`;
+};
+
+const _formatQuestListItem = (quest) => {
   //add <> to urls in title  and description to prevent embed
-  let title = _preventEmbed(quest.title);
-  let id = toFullWidth(quest.id);
-  let tags = '';
+  let title = helpers.preventEmbed(quest.title);
   let tagsArray = quest.tags || [];
 
   //replace empty with 'Sans titre'
@@ -355,21 +344,27 @@ function _formatQuestListItem(quest) {
     title = '*Sans titre*';
   }
 
-  if (tags.length > 0) {
-    tags = _formatTags(tagsArray);
-  }
+  const showId = true; //todo
+  const questId = showId ? `${_formatQuestId(quest.id)}>` : '';
+  // complete or incomplete
+  const questCompleted = quest.dateCompleted ? '☑' : '☐';
+  // lock if private
+  const questPrivate = quest.private ? ' 🔒' : '';
 
-  return `**${id}**> [${title}] ` + (tags !== '' ? ` ${tags}` : '');
-}
+  // strike through if completed
+  const striked = quest.dateCompleted ? '~~' : '';
+  const tagsText = tagsArray.length > 0 ? ` ${_formatTags(tagsArray)}` : '';
+
+  return `${questId}${questCompleted} ${striked}[${title}]${tagsText}${striked}`;
+};
 
 function _formatQuestMessage(quest) {
   let msg = _formatQuestListItem(quest);
   let players = quest.players || [];
   let give = quest.give || '';
   let image = quest.image || '';
-  let points = quest.points || 0;
   //todo
-  return '//TODO';
+  return '';
 }
 
 function _formatQuestEmbed(quest) {
@@ -378,7 +373,19 @@ function _formatQuestEmbed(quest) {
   let image = quest.image || '';
   let give = quest.give || '';
   let players = quest.players || [];
-  let points = quest.points || 0;
+
+  const color = quest.dateCompleted ? 0x00ff00 : 0x0000ff;
+  const footerStatus = quest.dateCompleted ? '✅ Accompli par' : '✎ Crée par';
+  const footerPrivate = quest.private ? ' 🔒' : '';
+  const footer = `${footerStatus} ${players
+    .map((player) => player)
+    .join(', ')}${footerPrivate}`;
+
+  const timestamp =
+    quest.dateCompleted != null
+      ? helpers.parseDate(quest.dateCompleted)
+      : helpers.parseDate(quest.dateCreated);
+
   //TODO
 
   //set thumbnail to image if image is set only
@@ -388,7 +395,24 @@ function _formatQuestEmbed(quest) {
     //.addField('Donne', give, true)
     //.addField('Points', points, true)
     //.addField('Joueurs', players.join(', '), true)
-    .setFooter({ text: 'ID: ' + quest.id });
+    .setColor(color)
+    .setFooter({ text: footer })
+    .setTimestamp(timestamp);
+
+  if (quest.dateCompleted) {
+    msgEmbed.addFields(
+      {
+        name: 'Créé',
+        value: `${helpers.formatEmbedFieldDate(quest.dateCreated)}`,
+        inline: true,
+      },
+      {
+        name: 'Accomplie',
+        value: `${helpers.formatEmbedFieldDate(quest.dateCompleted)}`,
+        inline: true,
+      }
+    );
+  }
 
   if (image !== '') {
     msgEmbed.setImage(image);
@@ -397,9 +421,12 @@ function _formatQuestEmbed(quest) {
   return msgEmbed;
 }
 
+function _formatQuestTitle(title) {
+  return `[${helpers.preventEmbed(title)}]`;
+}
+
 function _formatAutocompleteQuest(quest) {
-  //remove any urls from title
-  const title = quest.title.replace(/(https?:\/\/[^\s]+)/g, '');
+  const title = helpers.preventEmbed(quest.title);
 
   //if empty title, use "Sans titre"
   if (title === '') {
@@ -415,6 +442,7 @@ function _formatAutocompleteQuest(quest) {
 
 async function commandAdd(client, interaction) {
   const userName = client.users.cache.get(interaction.user.id).username; //TODO: check if user exists
+  const userId = interaction.user.id;
   const channelId = interaction.channelId;
   const channelName = interaction.channel.name;
   const title = interaction.options.getString('title');
@@ -425,22 +453,32 @@ async function commandAdd(client, interaction) {
 
   //TODO: validation ?
   const quest = {
+    createdBy: {
+      id: userId,
+      name: userName,
+    },
     title: title,
     description: description,
     image: image,
     give: give,
     private: private,
-    players: [...userName],
+    players: [userId],
   };
 
   try {
     client.logger.info(
-      `Ajout d'une quête [${title}] dans #${channelName} par @${userName}`
+      `Ajout d'une quête ${_formatQuestTitle(
+        title
+      )} dans ${helpers.formatChannelName(
+        channelName
+      )} par ${helpers.formatUsername(userName)}`
     );
     const newQuest = await api.createChannelQuest(channelId, quest);
     client.logger.debug(newQuest);
     interaction.reply({
-      content: `Quête [${quest.title}] ajoutée ! (ID: ${newQuest.id})`,
+      content: `Quête ${_formatQuestTitle(quest.title)} ajoutée ! (ID: ${
+        newQuest.id
+      })`,
       ephemeral: true,
     });
   } catch (error) {
@@ -454,25 +492,30 @@ async function commandUpdate(client, interaction) {
   const userName = client.users.cache.get(interaction.user.id).username;
   const channelName = interaction.channel.name;
   const channelId = interaction.channel.id;
+  //required
   const id = interaction.options.getString('id');
   const title = interaction.options.getString('title');
   const description = interaction.options.getString('description');
+  //optionnal
+  const give = interaction.options.detString('give') || '';
   const image = interaction.options.getString('image') || '';
-  const points = interaction.options.getInteger('points') || 0;
   const private = interaction.options.getBoolean('private') || false;
 
-  //TODO: validation ?
+  //validation ?
   const quest = {
     id: id,
     title: title,
     description: description,
     image: image,
-    points: points,
+    give: give,
     private: private,
   };
+
   try {
     client.logger.info(
-      `Modification de la quête [${id}] dans #${channelName} par @${userName}`
+      `Modification de la quête [${id}] dans ${helpers.formatChannelName(
+        channelName
+      )} par ${helpers.formatUsername(userName)}`
     );
     const updatedQuest = await api.updateChannelQuest(channelId, quest);
     client.logger.debug(updatedQuest);
@@ -491,12 +534,14 @@ async function commandShow(client, interaction, ephemeral = true) {
   const id = interaction.options.getString('id');
   try {
     client.logger.info(
-      `Affichage de la quête [${id}] dans #${channelName} par @${userName} ` +
+      `Affichage de la quête [${id}] dans ${helpers.formatChannelName(
+        channelName
+      )} par ${helpers.formatUsername(userName)} ` +
         (ephemeral === true ? '(en privé)' : '(en public)')
     );
     const quest = await api.getChannelQuestById(channelId, id);
     client.logger.debug(quest);
-    let msg = _formatQuestMessage(quest);
+    let msg = `${interaction.member} souhaite vous montrer cette quête:`;
     let embed = _formatQuestEmbed(quest);
     interaction.reply({
       content: msg,
@@ -514,17 +559,40 @@ async function commandShow(client, interaction, ephemeral = true) {
 
 async function commandList(client, interaction, ephemeral = true) {
   const userName = client.users.cache.get(interaction.user.id).username;
-  const channelId = interaction.channelId;
-  const channelName = interaction.channel.name;
+
+  let channelId = interaction.channelId;
+  let channelName = interaction.channel.name;
+
+  //options
+  const byuser = interaction.options.getString('user') || false;
+  const bychannel = interaction.options.getString('channel') || false;
+  const bytag = interaction.options.getString('tag') || false;
+
+  if (bychannel !== false) {
+    const channel = client.channels.cache.find(
+      (channel) => channel.id === bychannel
+    );
+    if (channel.partial) await channel.fetch();
+
+    channelId = bychannel;
+    channelName = channel.name;
+  }
+
   try {
     client.logger.info(
-      `Liste des quêtes de #${channelName} demandée par @${userName} ${
+      `Liste des quêtes de ${helpers.formatChannelName(
+        channelName
+      )} demandée par ${helpers.formatUsername(userName)} ${
         ephemeral === true ? '(en privé)' : '(en public)'
       }`
     );
 
     //api call
-    const quests = await api.getChannelQuests(channelId);
+    const questsAll = await api.getChannelQuests(channelId);
+
+    //filter deleted
+    const quests = questsAll.filter((quest) => !quest.dateDeleted);
+
     client.logger.debug(quests);
 
     //response message text
@@ -562,11 +630,18 @@ async function commandComplete(client, interaction) {
   const questId = interaction.options.getString('id');
   try {
     client.logger.info(
-      `Completion de la quête [${questId}] demandée dans #${channelName} par @${userName}`
+      `Validation de la quête [${questId}] demandée dans ${helpers.formatChannelName(
+        channelName
+      )} par ${helpers.formatUsername(userName)}`
     );
 
-    //api call
-    const quest = await api.getChannelQuestById(channelId, questId);
+    //api call parralel
+    //const quest = await api.getChannelQuestById(channelId, questId);
+    //const userSettings = await api.getUserSettings(interaction.user.id);
+    const [quest, userSettings] = await Promise.all([
+      api.getChannelQuestById(channelId, questId),
+      api.getUserSettings(interaction.user.id),
+    ]);
 
     //inconnu
     if (quest === undefined) {
@@ -578,9 +653,9 @@ async function commandComplete(client, interaction) {
     }
 
     //deja complete
-    if (quest.dateCompleted !== undefined) {
+    if (quest.dateCompleted) {
       interaction.reply({
-        content: `Quête [${questId}] déjà complétée !`,
+        content: `Quête [${questId}] déjà terminée !`,
         ephemeral: true,
       });
       return;
@@ -589,10 +664,24 @@ async function commandComplete(client, interaction) {
     const completedQuest = await api.completeChannelQuest(channelId, questId);
     client.logger.debug(completedQuest);
 
-    //public -> reponse dans le channel ou a été lancé la commande
-    interaction.reply({
-      content: `${interaction.member} a complété une quête !\n[${quest.title}] ${quest.description} !`,
-    });
+    //private or no annouce = reply to user. else to channel
+
+    const isPrivate = quest.private || userSettings.ANNOUNCE_COMPLETE === false;
+    if (isPrivate) {
+      //private -> reponse en privé
+      interaction.reply({
+        content: `Quête ${_formatQuestId(id)} ${_formatQuestTitle(
+          undeletedQuest.title
+        )} terminée !`,
+        ephemeral: true,
+      });
+    } else {
+      //public -> reponse dans le channel ou a été lancé la commande
+      interaction.reply({
+        content: `${interaction.member} a terminé une quête !`,
+        embeds: [_formatQuestEmbed(completedQuest)],
+      });
+    }
   } catch (error) {
     client.logger.error('Erreur lors de la commande complete');
     client.logger.debug(error.message);
@@ -607,11 +696,17 @@ async function commandDelete(client, interaction) {
   const id = interaction.options.getString('id');
   try {
     client.logger.info(
-      `Suppression de la quête [${id}] dans #${channelName} par @${userName}`
+      `Suppression de la quête [${id}] dans ${helpers.formatChannelName(
+        channelName
+      )} par ${helpers.formatUsername(userName)}`
     );
     const deletedQuest = await api.deleteChannelQuest(channelId, id);
     client.logger.debug(deletedQuest);
-    interaction.reply({ content: `Quête [${id}] supprimée !` });
+    interaction.reply({
+      content: `Quête ${_formatQuestId(id)} ${_formatQuestTitle(
+        deletedQuest.title
+      )} supprimée !`,
+    });
   } catch (error) {
     client.logger.error(`Erreur lors de la commande delete`);
     client.logger.debug(error.message);
@@ -626,12 +721,16 @@ async function commandUncomplete(client, interaction) {
   const id = interaction.options.getString('id');
   try {
     client.logger.info(
-      `Annulation de la completion de la quête [${id}] dans #${channelName} par @${userName}`
+      `Invalidation de la quête [${id}] dans ${helpers.formatChannelName(
+        channelName
+      )} par ${helpers.formatUsername(userName)}`
     );
     const uncompletedQuest = await api.uncompleteChannelQuest(channelId, id);
     client.logger.debug(uncompletedQuest);
     interaction.reply({
-      content: `Quête [${id}] restaurée !`,
+      content: `Quête ${_formatQuestId(id)} ${_formatQuestTitle(
+        uncompletedQuest.title
+      )} invalidée !`,
       ephemeral: true,
     });
   } catch (error) {
@@ -648,12 +747,16 @@ async function commandUndelete(client, interaction) {
   const id = interaction.options.getString('id');
   try {
     client.logger.info(
-      `Annulation de la suppression de la quête [${id}] dans #${channelName} par @${userName}`
+      `Annulation de la suppression de la quête [${id}] dans ${helpers.formatChannelName(
+        channelName
+      )} par ${helpers.formatUsername(userName)}`
     );
     const undeletedQuest = await api.undeleteChannelQuest(channelId, id);
     client.logger.debug(undeletedQuest);
     interaction.reply({
-      content: `Quête [${id}] restaurée !`,
+      content: `Quête ${_formatQuestId(id)} ${_formatQuestTitle(
+        undeletedQuest.title
+      )} restaurée !`,
       ephemeral: true,
     });
   } catch (error) {
@@ -679,7 +782,9 @@ async function autocompleteGetDeletableQuestIds(client, interaction) {
     return new Date(b.dateCreated) - new Date(a.dateCreated);
   });
   return quests
-    .filter((quest) => quest.dateDeleted === undefined)
+    .filter(
+      (quest) => quest.dateDeleted === undefined || quest.dateDeleted === null
+    )
     .map((quest) => _formatAutocompleteQuest(quest));
 }
 
@@ -690,7 +795,7 @@ async function autocompleteGetDeletedQuestIds(client, interaction) {
     return new Date(b.dateCreated) - new Date(a.dateCreated);
   });
   return quests
-    .filter((quest) => quest.dateDeleted !== undefined)
+    .filter((quest) => quest.dateDeleted)
     .map((quest) => _formatAutocompleteQuest(quest));
 }
 
@@ -701,7 +806,10 @@ async function autocompleteGetCompletableQuestIds(client, interaction) {
     return new Date(b.dateCreated) - new Date(a.dateCreated);
   });
   return quests
-    .filter((quest) => quest.dateCompleted === undefined)
+    .filter(
+      (quest) =>
+        quest.dateCompleted === undefined || quest.dateCompleted === null
+    )
     .map((quest) => _formatAutocompleteQuest(quest));
 }
 
@@ -717,7 +825,6 @@ async function autocompleteGetCompletedQuestIds(client, interaction) {
 }
 
 function _formatAutocompleteChannel(channel) {
-  console.log(channel);
   return {
     name: `#${channel.name} (${channel.id})`,
     value: channel.id,
@@ -771,6 +878,219 @@ async function autocompleteGetAllUsers(client, interaction) {
   });
 }
 
+//format user settings for display in message
+/*
+Annoncer:
+✅ **Création**
+❌ **Modification**
+❌ **Validation**
+❌ **Annulation de validation**
+❌ **Suppression**
+❌ **Annulation de suppression**
+Public:
+**Nom**: John Zoidberg
+**Avatar**: <https://cdn.discordapp.com/avatars/123456789012345678/123456789012345678.png>
+*/
+
+const formatSettings = (settings) => {
+  const announceCreate = settings.ANNOUNCE_CREATE ? '✅' : '❌';
+  const announceUpdate = settings.ANNOUNCE_UPDATE ? '✅' : '❌';
+  const announceComplete = settings.ANNOUNCE_COMPLETE ? '✅' : '❌';
+  const announceUncomplete = settings.ANNOUNCE_UNCOMPLETE ? '✅' : '❌';
+  const announceDelete = settings.ANNOUNCE_DELETE ? '✅' : '❌';
+  const announceUndelete = settings.ANNOUNCE_UNDELETE ? '✅' : '❌';
+  const announceSettingsText = `Annoncer:\n${announceCreate} **Création**\n${announceUpdate} **Modification**\n${announceComplete} **Validation**\n${announceUncomplete} **Annulation de validation**\n${announceDelete} **Suppression**\n${announceUndelete} **Annulation de suppression** `;
+  const publicSettingsText = `Public:\n**Nom**: ${settings.PUBLIC_NAME}\n**Avatar**: ${settings.PUBLIC_AVATAR}`;
+  return `${announceSettingsText}\n\n${publicSettingsText}`;
+};
+
+async function commandSettingsAnnounceCreate(client, interaction) {
+  const value = interaction.options.getBoolean('value');
+  try {
+    const settings = await api.getUserSettings(interaction.user.id);
+    settings.ANNOUNCE_CREATE = value;
+    await api.setUserSettings(interaction.user.id, settings);
+    interaction.reply({
+      content: `Paramètre ANNOUNCE_CREATE mis à jour sur ${value
+        .toString()
+        .toLocaleUpperCase()}!`,
+      ephemeral: true,
+    });
+    const loggerMsg = `User ${
+      interaction.member
+    } set ANNOUNCE_CREATE setting to ${value.toString().toLocaleUpperCase()}`;
+    client.logger.info(loggerMsg);
+  } catch (error) {
+    client.logger.error(error);
+  }
+}
+
+async function commandSettingsAnnounceUpdate(client, interaction) {
+  const value = interaction.options.getBoolean('value');
+  try {
+    const settings = await api.getUserSettings(interaction.user.id);
+    settings.ANNOUNCE_UPDATE = value;
+    await api.setUserSettings(interaction.user.id, settings);
+    interaction.reply({
+      content: `Paramètre ANNOUNCE_UPDATE mis à jour sur ${value
+        .toString()
+        .toLocaleUpperCase()}!`,
+      ephemeral: true,
+    });
+    const loggerMsg = `User ${
+      interaction.user.username
+    } set ANNOUNCE_UPDATE setting to ${value.toString().toLocaleUpperCase()}`;
+    client.logger.info(loggerMsg);
+  } catch (error) {
+    client.logger.error(error);
+  }
+}
+
+async function commandSettingsAnnounceComplete(client, interaction) {
+  const value = interaction.options.getBoolean('value');
+  try {
+    const settings = await api.getUserSettings(interaction.user.id);
+    settings.ANNOUNCE_COMPLETE = value;
+    await api.setUserSettings(interaction.user.id, settings);
+    interaction.reply({
+      content: `Paramètre ANNOUNCE_COMPLETE mis à jour sur ${value
+        .toString()
+        .toLocaleUpperCase()}!`,
+      ephemeral: true,
+    });
+    const loggerMsg = `User ${
+      interaction.member
+    } set ANNOUNCE_COMPLETE setting to ${value.toString().toLocaleUpperCase()}`;
+    client.logger.info(loggerMsg);
+  } catch (error) {
+    client.logger.error(error);
+  }
+}
+
+async function commandSettingsAnnounceUncomplete(client, interaction) {
+  const value = interaction.options.getBoolean('value');
+  try {
+    const settings = await api.getUserSettings(interaction.user.id);
+    settings.ANNOUNCE_UNCOMPLETE = value;
+    await api.setUserSettings(interaction.user.id, settings);
+    interaction.reply({
+      content: `Paramètre ANNOUNCE_UNCOMPLETE mis à jour sur ${value
+        .toString()
+        .toLocaleUpperCase()}!`,
+      ephemeral: true,
+    });
+    const loggerMsg = `User ${
+      interaction.user.username
+    } set ANNOUNCE_UNCOMPLETE setting to ${value
+      .toString()
+      .toLocaleUpperCase()}`;
+    client.logger.info(loggerMsg);
+  } catch (error) {
+    client.logger.error(error);
+  }
+}
+
+async function commandSettingsAnnounceDelete(client, interaction) {
+  const value = interaction.options.getBoolean('value');
+  try {
+    const settings = await api.getUserSettings(interaction.user.id);
+    settings.ANNOUNCE_DELETE = value;
+    await api.setUserSettings(interaction.user.id, settings);
+    interaction.reply({
+      content: `Paramètre ANNOUNCE_DELETE mis à jour sur ${value
+        .toString()
+        .toLocaleUpperCase()}!`,
+      ephemeral: true,
+    });
+    const loggerMsg = `User ${
+      interaction.user.username
+    } set ANNOUNCE_DELETE setting to ${value.toString().toLocaleUpperCase()}`;
+    client.logger.info(loggerMsg);
+  } catch (error) {
+    client.logger.error(error);
+  }
+}
+
+async function commandSettingsAnnounceUndelete(client, interaction) {
+  const value = interaction.options.getBoolean('value');
+  try {
+    const settings = await api.getUserSettings(interaction.user.id);
+    settings.ANNOUNCE_UNDELETE = value;
+    await api.setUserSettings(interaction.user.id, settings);
+    interaction.reply({
+      content: `Paramètre ANNOUNCE_UNDELETE mis à jour sur ${value
+        .toString()
+        .toLocaleUpperCase()}!`,
+      ephemeral: true,
+    });
+    const loggerMsg = `User ${
+      interaction.member
+    } set ANNOUNCE_UNDELETE setting to ${value.toString().toLocaleUpperCase()}`;
+    client.logger.info(loggerMsg);
+  } catch (error) {
+    client.logger.error(error);
+  }
+}
+
+async function commandSettingsPublicName(client, interaction) {
+  const value = interaction.options.getString('value');
+  try {
+    const settings = await api.getUserSettings(interaction.user.id);
+    settings.PUBLIC_NAME = value;
+    await api.setUserSettings(interaction.user.id, settings);
+    interaction.reply({
+      content: `Paramètre PUBLIC_NAME mis à jour sur ${value}!`,
+      ephemeral: true,
+    });
+    const loggerMsg = `User ${
+      interaction.member
+    } set PUBLIC_NAME setting to ${value.toString().toLocaleUpperCase()}`;
+    client.logger.info(loggerMsg);
+  } catch (error) {
+    client.logger.error(error);
+  }
+}
+
+async function commandSettingsPublicAvatar(client, interaction) {
+  const value = interaction.options.getString('value');
+  try {
+    const settings = await api.getUserSettings(interaction.user.id);
+    settings.PUBLIC_AVATAR = value;
+    await api.setUserSettings(interaction.user.id, settings);
+    interaction.reply({
+      content: `Paramètre PUBLIC_AVATAR mis à jour sur ${value}!`,
+      ephemeral: true,
+    });
+    const loggerMsg = `User ${
+      interaction.member
+    } set PUBLIC_AVATAR setting to ${value.toString().toLocaleUpperCase()}`;
+    client.logger.info(loggerMsg);
+  } catch (error) {
+    client.logger.error(error);
+  }
+}
+
+async function commandSettingsList(client, interaction) {
+  const userName = client.users.cache.get(interaction.user.id).username;
+  try {
+    client.logger.info(
+      `Liste des paramètres de ${helpers.formatUsername(userName)}`
+    );
+    const settings = await api.getUserSettings(interaction.user.id);
+    //TODO: format settings
+    interaction.reply({
+      content: `Paramètres de ${helpers.formatUsername(
+        userName
+      )} : ${formatSettings(settings)}`,
+      ephemeral: true,
+    });
+  } catch (error) {
+    client.logger.error(`Erreur lors de la commande settings list`);
+    client.logger.debug(error.message);
+    client.logger.debug(error.stack);
+  }
+}
+
 module.exports = {
   data: commands,
   async execute(client, interaction) {
@@ -796,10 +1116,8 @@ module.exports = {
             return await commandList(client, interaction);
           case 'showlist':
             return await commandList(client, interaction, false);
-          case 'done':
           case 'complete':
             return await commandComplete(client, interaction);
-          case 'undone':
           case 'uncomplete':
             return await commandUncomplete(client, interaction);
           case 'delete':
@@ -832,17 +1150,17 @@ module.exports = {
         switch (subcommand) {
           case 'list':
             return await commandSettingsList(client, interaction);
-          case 'announe_create':
+          case 'announce_create':
             return await commandSettingsAnnounceCreate(client, interaction);
-          case 'announe_update':
+          case 'announce_update':
             return await commandSettingsAnnounceUpdate(client, interaction);
-          case 'announe_complete':
+          case 'announce_complete':
             return await commandSettingsAnnounceComplete(client, interaction);
-          case 'announe_delete':
+          case 'announce_delete':
             return await commandSettingsAnnounceDelete(client, interaction);
-          case 'announe_undelete':
+          case 'announce_undelete':
             return await commandSettingsAnnounceUndelete(client, interaction);
-          case 'announe_uncomplete':
+          case 'announce_uncomplete':
             return await commandSettingsAnnounceUncomplete(client, interaction);
           case 'public_name':
             return await commandSettingsPublicName(client, interaction);
@@ -869,19 +1187,17 @@ module.exports = {
     let choices = [];
     switch (focusedOption.name) {
       case 'id':
-        if (subcommand === 'delete') {
-          choices = await autocompleteGetDeletableQuestIds(client, interaction);
-        } else if (subcommand === 'undelete') {
+        if (subcommand === 'undelete') {
           choices = await autocompleteGetDeletedQuestIds(client, interaction);
+        } else if (subcommand === 'uncomplete') {
+          choices = await autocompleteGetCompletedQuestIds(client, interaction);
         } else if (subcommand === 'complete') {
           choices = await autocompleteGetCompletableQuestIds(
             client,
             interaction
           );
-        } else if (subcommand === 'uncomplete') {
-          choices = await autocompleteGetCompletedQuestIds(client, interaction);
         } else {
-          choices = await autocompleteGetAllQuestIds(client, interaction);
+          choices = await autocompleteGetDeletableQuestIds(client, interaction);
         }
         break;
       case 'channel':

@@ -25,6 +25,6 @@
   },
   "scripts": {
     "start": "node src/index.js --no-warnings | pino-pretty",
-    "dev": "nodemon src/index.js | pino-pretty"
+    "dev": "nodemon src/index.js --ignore 'data/*' | pino-pretty"
   }
 }

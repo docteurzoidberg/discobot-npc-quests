@@ -6,9 +6,14 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const randomUUID = require('crypto').randomUUID;
 const pino = require('pino');
-const logger = require('pino-http')({
+
+const logger = pino({
+  level: process.env.LOG_LEVEL || 'info',
+});
+
+const loggerHttp = require('pino-http')({
   // Reuse an existing logger instance
-  logger: pino(),
+  logger: logger,
 
   // Define a custom request id function
   genReqId: function (req, res) {
@@ -103,7 +108,11 @@ const datapath = process.env.DATA_PATH || './data';
 if (!fs.existsSync(datapath + '/quests')) fs.mkdirSync(datapath + '/quests');
 
 const app = express();
-app.use(logger);
+app.use(loggerHttp);
+app.use((req, res, next) => {
+  req.logger = logger;
+  next();
+});
 
 //allow all origin for other docker containers
 app.use(

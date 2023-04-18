@@ -4,6 +4,31 @@ const API_URL = process.env.API_URL || false;
 
 const fetch = require('node-fetch');
 
+async function getUserSettings(userId) {
+  const response = await fetch(`${API_URL}/users/${userId}/settings`);
+  if (response.ok) {
+    return await response.json();
+  } else {
+    throw new Error(`API error: ${response.status} ${response.statusText}`);
+  }
+}
+
+//put user settings
+async function setUserSettings(userId, settings) {
+  const response = await fetch(`${API_URL}/users/${userId}/settings`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(settings),
+  });
+  if (response.ok) {
+    return await response.json();
+  } else {
+    throw new Error(`API error: ${response.status} ${response.statusText}`);
+  }
+}
+
 //TODO: write wrapper for all quest api methods
 async function getChannelQuests(channelId) {
   const response = await fetch(`${API_URL}/quests/${channelId}`);
@@ -42,7 +67,41 @@ async function completeChannelQuest(channelId, questId) {
   const response = await fetch(
     `${API_URL}/quests/${channelId}/${questId}/complete`,
     {
-      method: 'POST',
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+  if (response.ok) {
+    return await response.json();
+  } else {
+    throw new Error(`API error: ${response.status} ${response.statusText}`);
+  }
+}
+
+async function uncompleteChannelQuest(channelId, questId) {
+  const response = await fetch(
+    `${API_URL}/quests/${channelId}/${questId}/uncomplete`,
+    {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+  if (response.ok) {
+    return await response.json();
+  } else {
+    throw new Error(`API error: ${response.status} ${response.statusText}`);
+  }
+}
+
+async function undeleteChannelQuest(channelId, questId) {
+  const response = await fetch(
+    `${API_URL}/quests/${channelId}/${questId}/undelete`,
+    {
+      method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
@@ -67,9 +126,13 @@ async function deleteChannelQuest(channelId, questId) {
 }
 
 module.exports = {
+  getUserSettings,
+  setUserSettings,
   getChannelQuests,
   getChannelQuestById,
   createChannelQuest,
   completeChannelQuest,
+  uncompleteChannelQuest,
   deleteChannelQuest,
+  undeleteChannelQuest,
 };
