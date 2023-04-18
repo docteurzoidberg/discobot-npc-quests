@@ -1202,14 +1202,14 @@ module.exports = {
         break;
       case 'channel':
         //check subcommand
-        if (subcommand === 'showlist' || subcommand === 'list') {
-          choices = await autocompleteGetAllChannelsWithQuests(
-            client,
-            interaction
-          );
-        } else {
-          choices = await autocompleteGetAllChannels(client, interaction);
-        }
+        //if (subcommand === 'showlist' || subcommand === 'list') {
+        //  choices = await autocompleteGetAllChannelsWithQuests(
+        //    client,
+        //    interaction
+        //  );
+        //} else {
+        choices = await autocompleteGetAllChannels(client, interaction);
+        //}
         break;
       case 'user':
         choices = await autocompleteGetAllUsers(client, interaction);
