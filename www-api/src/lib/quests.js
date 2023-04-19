@@ -89,7 +89,7 @@ function _generateID(index) {
 
 async function _getNextUnusedGlobalQuestId() {
   //list channels
-  const channelIds = await _getChannelsIds();
+  const channelIds = await getChannelsIds();
   console.debug(channelIds);
 
   //for each channel load the database
@@ -114,7 +114,7 @@ async function _getNextUnusedGlobalQuestId() {
   return newQuestId;
 }
 
-async function _getChannelsIds() {
+async function getChannelsIds() {
   const channelFiles = fs.readdirSync(`${databasePath}/quests`);
   const channelIds = channelFiles.map((file) => file.replace('.json', ''));
   //filter valid channel ids
@@ -201,31 +201,32 @@ async function addChannelQuest(channelId, questObject) {
   return newQuest;
 }
 
-async function updateChannelQuest(channelId, quest) {
+async function updateChannelQuest(channelId, questId, questObject) {
   _checkChannelId(channelId);
-  _checkQuestObject(quest);
+  _checkQuestId(questId);
+  _checkQuestObject(questObject);
   const db = await _loadChannelDatabase(channelId);
 
   let found = -1;
   db.quests.forEach((element, index) => {
-    if (element.id.toLowerCase() === quest.id.toLowerCase()) {
+    if (element.id.toLowerCase() === questId.toLowerCase()) {
       found = index;
     }
   });
   if (found === -1) {
-    throw new Error(`Error updating quests: ${quest.id} not found`);
+    throw new Error(`Error updating quests: ${questId} not found`);
   }
 
   const questOveride = {
     dateUpdated: new Date(),
   };
 
-  const questUpdate = { ...quest, ...questOveride };
+  const questUpdated = { ...questObject.quest, ...questOveride };
 
   //update database quest
-  db.quests[found] = questUpdate;
+  db.quests[found] = questUpdated;
   await _saveChannelDatabase(channelId, db);
-  return questUpdate;
+  return questUpdated;
 }
 
 async function completeChannelQuest(channelId, questId) {
@@ -395,6 +396,7 @@ async function uncompleteChannelQuest(channelId, questId) {
 }
 
 module.exports = {
+  getChannelsIds,
   getChannelQuestById,
   getChannelQuests,
   getChannelPublicQuests,

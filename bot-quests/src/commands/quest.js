@@ -422,20 +422,23 @@ function _formatQuestEmbed(quest) {
 }
 
 function _formatQuestTitle(title) {
-  return `[${helpers.preventEmbed(title)}]`;
+  let questTitle = title || '';
+  //if empty title, use "Sans titre"
+  if (questTitle === '') {
+    questTitle = '*Sans titre*';
+  }
+  return `[${helpers.preventEmbed(questTitle)}]`;
 }
 
 function _formatAutocompleteQuest(quest) {
-  const title = helpers.preventEmbed(quest.title);
-
+  let questTitle = quest.title || '';
   //if empty title, use "Sans titre"
-  if (title === '') {
-    quest.title = 'Sans titre';
-  } else {
-    quest.title = title;
+  if (questTitle === '') {
+    questTitle = '*Sans titre*';
   }
+  const title = helpers.preventEmbed(questTitle);
   return {
-    name: `${quest.id} ${quest.title}`,
+    name: `${quest.id} ${title}`,
     value: quest.id.toLocaleUpperCase(),
   };
 }
@@ -492,24 +495,16 @@ async function commandUpdate(client, interaction) {
   const userName = client.users.cache.get(interaction.user.id).username;
   const channelName = interaction.channel.name;
   const channelId = interaction.channel.id;
+
   //required
   const id = interaction.options.getString('id');
-  const title = interaction.options.getString('title');
-  const description = interaction.options.getString('description');
-  //optionnal
-  const give = interaction.options.detString('give') || '';
-  const image = interaction.options.getString('image') || '';
-  const private = interaction.options.getBoolean('private') || false;
 
-  //validation ?
-  const quest = {
-    id: id,
-    title: title,
-    description: description,
-    image: image,
-    give: give,
-    private: private,
-  };
+  //optional
+  const title = interaction.options.getString('title') || false;
+  const description = interaction.options.getString('description') || false;
+  const give = interaction.options.getString('give') || false;
+  const image = interaction.options.getString('image') || false;
+  const private = interaction.options.getBoolean('private') || false;
 
   try {
     client.logger.info(
@@ -517,7 +512,27 @@ async function commandUpdate(client, interaction) {
         channelName
       )} par ${helpers.formatUsername(userName)}`
     );
-    const updatedQuest = await api.updateChannelQuest(channelId, quest);
+
+    //only provide fields which are not false
+    const quest = {};
+    //const quest = await api.getChannelQuestById(channelId, id);
+    if (title !== false) {
+      quest.title = title;
+    }
+    if (description !== false) {
+      quest.description = description;
+    }
+    if (give !== false) {
+      quest.give = give;
+    }
+    if (image !== false) {
+      quest.image = image;
+    }
+    if (private !== false) {
+      quest.private = private;
+    }
+
+    const updatedQuest = await api.updateChannelQuest(channelId, id, quest);
     client.logger.debug(updatedQuest);
     interaction.reply({ content: `Quête [${id}] modifiée !` });
   } catch (error) {
@@ -826,25 +841,26 @@ async function autocompleteGetCompletedQuestIds(client, interaction) {
 
 function _formatAutocompleteChannel(channel) {
   return {
-    name: `#${channel.name} (${channel.id})`,
+    name: `#${
+      channel.name.length > 24
+        ? channel.name.substring(0, 21) + '...'
+        : channel.name
+    }}`,
     value: channel.id,
   };
 }
 
 //return all current interaction guild 's channels with at least one quest
 async function autocompleteGetAllChannelsWithQuests(client, interaction) {
-  //get current interaction guild 's channels list
-  const channels = client.channels.cache.filter(async (channel) => {
-    //get channel quests
-    const channelQuests = await api.getChannelQuests(channel.id);
-    //filter channels
-    return (
-      channel.type === 0 && //text channel
-      interaction.guild.id === channel.guildId && //same guild
-      channelQuests.length > 0 //at least one quest
-    );
+  const channelsIdWithQuests = await api.getChannelsWithQuests();
+  const channels = channelsIdWithQuests.map(async (channelId) => {
+    const channel = client.channels.cache.get(channelId);
+    if (channel.partial) {
+      await channel.fetch();
+    }
+    return _formatAutocompleteChannel(channel);
   });
-  return channels.map((channel) => _formatAutocompleteChannel(channel));
+  return channels;
 }
 
 //return all current interaction guild 's channels
@@ -1202,14 +1218,14 @@ module.exports = {
         break;
       case 'channel':
         //check subcommand
-        //if (subcommand === 'showlist' || subcommand === 'list') {
-        //  choices = await autocompleteGetAllChannelsWithQuests(
-        //    client,
-        //    interaction
-        //  );
-        //} else {
-        choices = await autocompleteGetAllChannels(client, interaction);
-        //}
+        if (subcommand === 'showlist' || subcommand === 'list') {
+          choices = await autocompleteGetAllChannelsWithQuests(
+            client,
+            interaction
+          );
+        } else {
+          choices = await autocompleteGetAllChannels(client, interaction);
+        }
         break;
       case 'user':
         choices = await autocompleteGetAllUsers(client, interaction);

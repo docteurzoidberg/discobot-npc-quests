@@ -4,6 +4,15 @@ const API_URL = process.env.API_URL || false;
 
 const fetch = require('node-fetch');
 
+async function getChannelsWithQuests() {
+  const response = await fetch(`${API_URL}/channels`);
+  if (response.ok) {
+    return await response.json();
+  } else {
+    throw new Error(`API error: ${response.status} ${response.statusText}`);
+  }
+}
+
 async function getUserSettings(userId) {
   const response = await fetch(`${API_URL}/users/${userId}/settings`);
   if (response.ok) {
@@ -51,6 +60,21 @@ async function getChannelQuestById(channelId, questId) {
 async function createChannelQuest(channelId, quest) {
   const response = await fetch(`${API_URL}/quests/${channelId}`, {
     method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ quest: quest }),
+  });
+  if (response.ok) {
+    return await response.json();
+  } else {
+    throw new Error(`API error: ${response.status} ${response.statusText}`);
+  }
+}
+
+async function updateChannelQuest(channelId, questId, quest) {
+  const response = await fetch(`${API_URL}/quests/${channelId}/${questId}`, {
+    method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
     },
@@ -126,11 +150,13 @@ async function deleteChannelQuest(channelId, questId) {
 }
 
 module.exports = {
+  getChannelsWithQuests,
   getUserSettings,
   setUserSettings,
   getChannelQuests,
   getChannelQuestById,
   createChannelQuest,
+  updateChannelQuest,
   completeChannelQuest,
   uncompleteChannelQuest,
   deleteChannelQuest,
