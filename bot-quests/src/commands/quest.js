@@ -26,10 +26,13 @@ const commands = new SlashCommandBuilder()
           .setRequired(true)
       )
       .addStringOption((option) =>
+        option.setName('give').setDescription('Récompenses')
+      )
+      .addStringOption((option) =>
         option.setName('icon').setDescription("URL de l'icone")
       )
       .addStringOption((option) =>
-        option.setName('give').setDescription('Récompenses')
+        option.setName('image').setDescription("URL de l'image")
       )
   )
 
@@ -52,7 +55,10 @@ const commands = new SlashCommandBuilder()
         option.setName('description').setDescription('Description de la quête')
       )
       .addStringOption((option) =>
-        option.setName('image').setDescription("URL de l'icone")
+        option.setName('image').setDescription("URL de l'image")
+      )
+      .addStringOption((option) =>
+        option.setName('icon').setDescription("URL de l'icone")
       )
       .addStringOption((option) =>
         option.setName('give').setDescription('Récompense(s)')
@@ -371,6 +377,7 @@ function _formatQuestEmbed(quest) {
   let title = quest.title || '*Sans titre*';
   let description = quest.description || '*Aucune description*';
   let image = quest.image || '';
+  let icon = quest.icon || '';
   let give = quest.give || '';
   let players = quest.players || [];
 
@@ -418,6 +425,10 @@ function _formatQuestEmbed(quest) {
     msgEmbed.setImage(image);
   }
 
+  if (icon !== '') {
+    msgEmbed.setThumbnail(icon);
+  }
+
   return msgEmbed;
 }
 
@@ -443,6 +454,31 @@ function _formatAutocompleteQuest(quest) {
   };
 }
 
+async function getUserName(client, userNameOrId) {
+  const unknown = 'Utilisateur inconnu';
+  if (!userNameOrId) {
+    return unknown;
+  }
+  if (userNameOrId.match(/^[0-9]+$/)) {
+    try {
+      const user = await client.users.fetch(userNameOrId);
+      return user.username;
+    } catch (error) {
+      return unknown;
+    }
+  }
+  return userNameOrId;
+}
+
+async function getUserNames(client, usersOrIds) {
+  const users = await Promise.all(
+    usersOrIds.map(async (userNameOrId) => {
+      return getUserName(client, userNameOrId);
+    })
+  );
+  return users;
+}
+
 async function commandAdd(client, interaction) {
   const userName = client.users.cache.get(interaction.user.id).username; //TODO: check if user exists
   const userId = interaction.user.id;
@@ -456,10 +492,7 @@ async function commandAdd(client, interaction) {
 
   //TODO: validation ?
   const quest = {
-    createdBy: {
-      id: userId,
-      name: userName,
-    },
+    createdBy: userId,
     title: title,
     description: description,
     image: image,
@@ -504,6 +537,7 @@ async function commandUpdate(client, interaction) {
   const description = interaction.options.getString('description') || false;
   const give = interaction.options.getString('give') || false;
   const image = interaction.options.getString('image') || false;
+  const icon = interaction.options.getString('icon') || false;
   const private = interaction.options.getBoolean('private') || false;
 
   try {
@@ -527,6 +561,9 @@ async function commandUpdate(client, interaction) {
     }
     if (image !== false) {
       quest.image = image;
+    }
+    if (icon !== false) {
+      quest.icon = icon;
     }
     if (private !== false) {
       quest.private = private;
@@ -555,6 +592,11 @@ async function commandShow(client, interaction, ephemeral = true) {
         (ephemeral === true ? '(en privé)' : '(en public)')
     );
     const quest = await api.getChannelQuestById(channelId, id);
+
+    //replace users ids by names
+    quest.players = await getUserNames(client, quest.players || []);
+    quest.createdBy = await getUserName(client, quest.createdBy || 'Inconnu');
+
     client.logger.debug(quest);
     let msg = `${interaction.member} souhaite vous montrer cette quête:`;
     let embed = _formatQuestEmbed(quest);
@@ -639,6 +681,7 @@ async function commandList(client, interaction, ephemeral = true) {
 }
 
 async function commandComplete(client, interaction) {
+  const userId = interaction.user.id;
   const userName = client.users.cache.get(interaction.user.id).username;
   const channelId = interaction.channelId;
   const channelName = interaction.channel.name;
@@ -676,7 +719,11 @@ async function commandComplete(client, interaction) {
       return;
     }
 
-    const completedQuest = await api.completeChannelQuest(channelId, questId);
+    const completedQuest = await api.completeChannelQuest(
+      channelId,
+      questId,
+      userId
+    );
     client.logger.debug(completedQuest);
 
     //private or no annouce = reply to user. else to channel

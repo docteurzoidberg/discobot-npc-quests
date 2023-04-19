@@ -229,9 +229,10 @@ async function updateChannelQuest(channelId, questId, questObject) {
   return questUpdated;
 }
 
-async function completeChannelQuest(channelId, questId) {
+async function completeChannelQuest(channelId, questId, userId) {
   _checkChannelId(channelId);
   _checkQuestId(questId);
+  _checkUserId(userId);
   const db = await _loadChannelDatabase(channelId);
   _checkChannelDatabase(db);
   let found = -1;
@@ -246,6 +247,7 @@ async function completeChannelQuest(channelId, questId) {
 
   let quest = db.quests[found];
   quest.dateCompleted = new Date();
+  quest.completedBy = userId;
 
   //update database quest
   db.quests[found] = quest;
