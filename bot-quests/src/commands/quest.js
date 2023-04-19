@@ -571,7 +571,7 @@ async function commandUpdate(client, interaction) {
 
     const updatedQuest = await api.updateChannelQuest(channelId, id, quest);
     client.logger.debug(updatedQuest);
-    interaction.reply({ content: `Quête [${id}] modifiée !` });
+    interaction.reply({ content: `Quête [${id}] modifiée !`, ephemeral: true });
   } catch (error) {
     client.logger.error(`Erreur lors de la commande update`);
     client.logger.debug(error.message);
@@ -768,6 +768,7 @@ async function commandDelete(client, interaction) {
       content: `Quête ${_formatQuestId(id)} ${_formatQuestTitle(
         deletedQuest.title
       )} supprimée !`,
+      ephemeral: true,
     });
   } catch (error) {
     client.logger.error(`Erreur lors de la commande delete`);
