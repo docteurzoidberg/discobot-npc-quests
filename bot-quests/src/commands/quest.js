@@ -514,8 +514,8 @@ async function commandUpdate(client, interaction) {
     );
 
     //only provide fields which are not false
-    const quest = {};
-    //const quest = await api.getChannelQuestById(channelId, id);
+    //const quest = {};
+    const quest = await api.getChannelQuestById(channelId, id);
     if (title !== false) {
       quest.title = title;
     }
