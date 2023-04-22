@@ -2,6 +2,7 @@ const { SlashCommandBuilder } = require('@discordjs/builders');
 const { EmbedBuilder } = require('discord.js');
 
 const api = require('../lib/quests-api');
+const dalle = require('../lib/openai-dall-e');
 const helpers = require('../lib/discobot-helpers');
 
 const commands = new SlashCommandBuilder()
@@ -419,6 +420,35 @@ function _formatQuestMessage(quest) {
   return '';
 }
 
+function _formatQuestEmbedShort(quest) {
+  let title = quest.title || '*Sans titre*';
+  let description = quest.description || '*Aucune description*';
+  let icon = quest.icon || quest.image || '';
+  let players = quest.players || [];
+  const color = quest.dateCompleted ? 0x00ff00 : helpers.colorFromId(quest.id);
+  const footerStatus = quest.dateCompleted ? '✅ Accompli par' : '✎ Crée par';
+  const footerPrivate = quest.private ? ' 🔒' : '';
+  const footer = `${footerStatus} ${players
+    .map((player) => player)
+    .join(', ')}${footerPrivate}`;
+
+  const timestamp =
+    quest.dateCompleted != null
+      ? helpers.parseDate(quest.dateCompleted)
+      : helpers.parseDate(quest.dateCreated);
+
+  let msgEmbed = new EmbedBuilder()
+    .setTitle(title)
+    .setDescription(description)
+    .setColor(color)
+    .setFooter({ text: footer })
+    .setTimestamp(timestamp);
+
+  if (icon) {
+    msgEmbed.setThumbnail(icon);
+  }
+}
+
 function _formatQuestEmbed(quest, short = false) {
   let title = quest.title || '*Sans titre*';
   let description = quest.description || '*Aucune description*';
@@ -507,7 +537,7 @@ async function getUserName(client, userNameOrId) {
   }
   if (userNameOrId.match(/^[0-9]+$/)) {
     try {
-      const user = await client.users.fetch(userNameOrId);
+      const user = await client.users.cache.get(userNameOrId);
       return user.username;
     } catch (error) {
       return unknown;
@@ -523,6 +553,11 @@ async function getUserNames(client, usersOrIds) {
   return users;
 }
 
+function generateDallePrompt(title) {
+  const prompt = `imagine un personnage de jeu rpg en style pixel-art vue top-down, qui est en train d'accomplir la quête intitulée [${title}]`;
+  return prompt;
+}
+
 async function commandAdd(client, interaction) {
   const userName = client.users.cache.get(interaction.user.id).username; //TODO: check if user exists
   const userId = interaction.user.id;
@@ -530,10 +565,28 @@ async function commandAdd(client, interaction) {
   const channelName = interaction.channel.name;
   const title = interaction.options.getString('title');
   const description = interaction.options.getString('description');
-  const image = interaction.options.getString('image') || '';
-  const icon = interaction.options.getString('icon') || '';
-  const give = interaction.options.getString('give') || '';
+  let image = interaction.options.getString('image') || '';
+  let icon = interaction.options.getString('icon') || '';
+  let give = interaction.options.getString('give') || '';
   const private = interaction.options.getBoolean('private') || false;
+  let deferred = false;
+
+  //Autogen images with dall-e?
+  if (client.config.USE_DALLE && (image === '' || icon === '')) {
+    const prompt = generateDallePrompt(title);
+
+    //take long time so tell discord
+    deferred = true;
+    interaction.deferReply({ ephemeral: true });
+
+    const dalleImage = await dalle.getDallEImage(prompt);
+    if (image === '') {
+      image = dalleImage;
+    }
+    if (icon === '') {
+      icon = dalleImage;
+    }
+  }
 
   //TODO: validation ?
   const quest = {
@@ -557,12 +610,21 @@ async function commandAdd(client, interaction) {
     );
     const newQuest = await api.createChannelQuest(channelId, quest);
     client.logger.debug(newQuest);
-    interaction.reply({
-      content: `Quête ${_formatQuestTitle(quest.title)} ajoutée ! (ID: ${
-        newQuest.id
-      })`,
-      ephemeral: true,
-    });
+    if (!deferred) {
+      interaction.reply({
+        content: `Quête ${_formatQuestTitle(quest.title)} ajoutée ! (ID: ${
+          newQuest.id
+        })`,
+        ephemeral: true,
+      });
+    } else {
+      interaction.editReply({
+        content: `Quête ${_formatQuestTitle(quest.title)} ajoutée ! (ID: ${
+          newQuest.id
+        })`,
+        ephemeral: true,
+      });
+    }
   } catch (error) {
     client.logger.error('Erreur lors de la commande add');
     client.logger.debug(error.message);
@@ -802,7 +864,7 @@ async function commandComplete(client, interaction) {
       //public -> reponse dans le channel ou a été lancé la commande
       interaction.reply({
         content: `${interaction.member} a terminé une quête !`,
-        embeds: [_formatQuestEmbed(completedQuest)],
+        embeds: [_formatQuestEmbed(completedQuest, true)],
       });
     }
   } catch (error) {
