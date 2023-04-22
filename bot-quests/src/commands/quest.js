@@ -141,13 +141,19 @@ const commands = new SlashCommandBuilder()
   .addSubcommand((subcommand) =>
     subcommand
       .setName('show')
-      .setDescription('Afficher la quête dans le channel/thread')
+      .setDescription('Afficher la quête publiquement')
       .addStringOption((option) =>
         option
           .setName('id')
           .setDescription('ID de la quête')
           .setRequired(true)
           .setAutocomplete(true)
+      )
+      .addBooleanOption((option) =>
+        option
+          .setName('short')
+          .setDescription('Afficher en mode court')
+          .setRequired(false)
       )
   )
 
@@ -186,7 +192,7 @@ const commands = new SlashCommandBuilder()
       )
   )
 
-  // tags
+  // tags group
   .addSubcommandGroup((group) =>
     group
       .setName('tag')
@@ -240,7 +246,7 @@ const commands = new SlashCommandBuilder()
       )
   )
 
-  // settings
+  // settings group
   .addSubcommandGroup((group) =>
     group
       .setName('settings')
@@ -326,6 +332,46 @@ const commands = new SlashCommandBuilder()
             option.setName('value').setDescription('Valeur')
           )
       )
+  )
+
+  // players group
+  .addSubcommandGroup((group) =>
+    group
+      .setName('player')
+      .setDescription('Gestion des joueurs')
+      .addSubcommand((subcommand) =>
+        subcommand.setName('list').setDescription('Liste les joueurs')
+      )
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName('add')
+          .setDescription('Ajoute un joueur sur une quête')
+          .addStringOption((option) =>
+            option
+              .setName('id')
+              .setDescription('ID de la quête')
+              .setRequired(true)
+              .setAutocomplete(true)
+          )
+          .addUserOption((option) =>
+            option.setName('player').setDescription('Joueur').setRequired(true)
+          )
+      )
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName('remove')
+          .setDescription('Retire un joueur dune quête')
+          .addStringOption((option) =>
+            option
+              .setName('id')
+              .setDescription('ID de la quête')
+              .setRequired(true)
+              .setAutocomplete(true)
+          )
+          .addUserOption((option) =>
+            option.setName('player').setDescription('Joueur').setRequired(true)
+          )
+      )
   );
 
 const separatorLine = '----------------------------------------';
@@ -373,7 +419,7 @@ function _formatQuestMessage(quest) {
   return '';
 }
 
-function _formatQuestEmbed(quest) {
+function _formatQuestEmbed(quest, short = false) {
   let title = quest.title || '*Sans titre*';
   let description = quest.description || '*Aucune description*';
   let image = quest.image || '';
@@ -381,7 +427,7 @@ function _formatQuestEmbed(quest) {
   let give = quest.give || '';
   let players = quest.players || [];
 
-  const color = quest.dateCompleted ? 0x00ff00 : 0x0000ff;
+  const color = quest.dateCompleted ? 0x00ff00 : helpers.colorFromId(quest.id);
   const footerStatus = quest.dateCompleted ? '✅ Accompli par' : '✎ Crée par';
   const footerPrivate = quest.private ? ' 🔒' : '';
   const footer = `${footerStatus} ${players
@@ -406,7 +452,7 @@ function _formatQuestEmbed(quest) {
     .setFooter({ text: footer })
     .setTimestamp(timestamp);
 
-  if (quest.dateCompleted) {
+  if (!short && quest.dateCompleted) {
     msgEmbed.addFields(
       {
         name: 'Créé',
@@ -421,7 +467,7 @@ function _formatQuestEmbed(quest) {
     );
   }
 
-  if (image !== '') {
+  if (!short && image !== '') {
     msgEmbed.setImage(image);
   }
 
@@ -486,7 +532,8 @@ async function commandAdd(client, interaction) {
   const channelName = interaction.channel.name;
   const title = interaction.options.getString('title');
   const description = interaction.options.getString('description');
-  const image = interaction.options.getString('icon') || '';
+  const image = interaction.options.getString('image') || '';
+  const icon = interaction.options.getString('icon') || '';
   const give = interaction.options.getString('give') || '';
   const private = interaction.options.getBoolean('private') || false;
 
@@ -496,6 +543,7 @@ async function commandAdd(client, interaction) {
     title: title,
     description: description,
     image: image,
+    icon: icon,
     give: give,
     private: private,
     players: [userId],
@@ -540,6 +588,18 @@ async function commandUpdate(client, interaction) {
   const icon = interaction.options.getString('icon') || false;
   const private = interaction.options.getBoolean('private') || false;
 
+  const optionnalNull = (value) => {
+    switch (value) {
+      case 'null':
+      case 'rien':
+      case 'none':
+      case '-':
+        return '';
+      default:
+        return value;
+    }
+  };
+
   try {
     client.logger.info(
       `Modification de la quête [${id}] dans ${helpers.formatChannelName(
@@ -557,13 +617,13 @@ async function commandUpdate(client, interaction) {
       quest.description = description;
     }
     if (give !== false) {
-      quest.give = give;
+      quest.give = optionnalNull(give);
     }
     if (image !== false) {
-      quest.image = image;
+      quest.image = optionnalNull(image);
     }
     if (icon !== false) {
-      quest.icon = icon;
+      quest.icon = optionnalNull(icon);
     }
     if (private !== false) {
       quest.private = private;
@@ -584,6 +644,7 @@ async function commandShow(client, interaction, ephemeral = true) {
   const channelName = interaction.channel.name;
   const channelId = interaction.channelId;
   const id = interaction.options.getString('id');
+  const short = interaction.options.getBoolean('short') || false;
   try {
     client.logger.info(
       `Affichage de la quête [${id}] dans ${helpers.formatChannelName(
@@ -598,8 +659,10 @@ async function commandShow(client, interaction, ephemeral = true) {
     quest.createdBy = await getUserName(client, quest.createdBy || 'Inconnu');
 
     client.logger.debug(quest);
-    let msg = `${interaction.member} souhaite vous montrer cette quête:`;
-    let embed = _formatQuestEmbed(quest);
+    let msg = short
+      ? ''
+      : `${interaction.member} souhaite vous montrer cette quête:`;
+    let embed = _formatQuestEmbed(quest, short);
     interaction.reply({
       content: msg,
       embeds: [embed],
@@ -1155,6 +1218,56 @@ async function commandSettingsList(client, interaction) {
   }
 }
 
+async function commandPlayerAdd(client, interaction) {
+  const userId = interaction.user.id;
+  const userName = client.users.cache.get(userId).username;
+  const player = interaction.options.getUser('player') || false;
+  const questId = interaction.options.getString('id') || false;
+  try {
+    client.logger.info(
+      `Ajout du joueur ${helpers.formatUsername(
+        player.userName
+      )} à la quête ${questId} par ${helpers.formatUsername(userName)}`
+    );
+    const quest = await api.addPlayerToQuest(questId, player.id);
+    interaction.reply({
+      content: `Joueur ${helpers.formatUsername(
+        player.username
+      )} ajouté à la quête ${questId}!`,
+      ephemeral: true,
+    });
+  } catch (error) {
+    client.logger.error(`Erreur lors de la commande player add`);
+    client.logger.debug(error.message);
+    client.logger.debug(error.stack);
+  }
+}
+
+async function commandPlayerRemove(client, interaction) {
+  const userId = interaction.user.id;
+  const userName = client.users.cache.get(userId).username;
+  const player = interaction.options.getUser('player') || false;
+  const questId = interaction.options.getString('id') || false;
+  try {
+    client.logger.info(
+      `Retrait du joueur ${helpers.formatUsername(
+        player.userName
+      )} de la quête ${questId} par ${helpers.formatUsername(userName)}`
+    );
+    const quest = await api.removePlayerFromQuest(questId, player.id);
+    interaction.reply({
+      content: `Joueur ${helpers.formatUsername(
+        player.username
+      )} retiré de la quête ${questId}!`,
+      ephemeral: true,
+    });
+  } catch (error) {
+    client.logger.error(`Erreur lors de la commande player remove`);
+    client.logger.debug(error.message);
+    client.logger.debug(error.stack);
+  }
+}
+
 module.exports = {
   data: commands,
   async execute(client, interaction) {
@@ -1191,6 +1304,21 @@ module.exports = {
           default:
             interaction.reply({
               content: `Désolé mais, la commande ${subcommand} n'existe pas ou n'est pas encore implementée :(`,
+              ephemeral: true,
+            });
+        }
+        return;
+      case 'player':
+        switch (subcommand) {
+          case 'add':
+            return await commandPlayerAdd(client, interaction);
+          case 'remove':
+            return await commandPlayerRemove(client, interaction);
+          case 'list':
+            return await commandPlayerList(client, interaction);
+          default:
+            interaction.reply({
+              content: `Désolé mais, la commande ${commandgroup} ${subcommand} n'existe pas ou n'est pas encore implementée :(`,
               ephemeral: true,
             });
         }

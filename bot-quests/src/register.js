@@ -1,4 +1,9 @@
-require('dotenv').config({ path: __dirname + '/../.env' });
+require('dotenv').config({
+  path:
+    __dirname +
+    '/../.env' +
+    (process.env.NODE_ENV ? '.' + process.env.NODE_ENV : ''),
+});
 
 const logger = require('pino')({ level: process.env.LOG_LEVEL || 'debug' });
 const fs = require('fs');

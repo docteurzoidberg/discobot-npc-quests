@@ -47,6 +47,13 @@ const _checkQuestId = (questId) => {
     throw new Error('Invalid questId provided');
 };
 
+const _checkUserId = (questId) => {
+  if (!questId) throw new Error('No questId provided');
+  //quest id is a 2 or more char string
+  if (!questId.match(/^[a-zA-Z0-9]{2,}$/))
+    throw new Error('Invalid questId provided');
+};
+
 const _checkQuestObject = (questObject) => {
   if (!questObject) throw new Error('No questObject provided');
   if (!questObject.quest) throw new Error('No questObject.quest provided');

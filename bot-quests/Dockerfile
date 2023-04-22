@@ -19,7 +19,7 @@ RUN npm install -g pino-pretty
 COPY . .
 
 # REGISTER bot commands
-RUN npm run register 
+RUN npm run register
 
 # RUN
 CMD ["dumb-init", "npm", "run", "start"]
