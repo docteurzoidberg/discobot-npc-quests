@@ -87,9 +87,9 @@ async function updateChannelQuest(channelId, questId, quest) {
   }
 }
 
-async function completeChannelQuest(channelId, questId) {
+async function completeChannelQuest(channelId, questId, userId) {
   const response = await fetch(
-    `${API_URL}/quests/${channelId}/${questId}/complete`,
+    `${API_URL}/quests/${channelId}/${questId}/${userId}/complete`,
     {
       method: 'PUT',
       headers: {

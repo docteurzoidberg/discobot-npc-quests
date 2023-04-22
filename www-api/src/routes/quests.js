@@ -49,8 +49,8 @@ const deleteChannelQuest = async (req, res) => {
 };
 
 const completeChannelQuest = async (req, res) => {
-  const { channelId, questId } = req.params;
-  const quest = await questsdb.completeChannelQuest(channelId, questId);
+  const { channelId, questId, userId } = req.params;
+  const quest = await questsdb.completeChannelQuest(channelId, questId, userId);
   res.json(quest);
 };
 
@@ -103,7 +103,7 @@ router.get('/:channelId/:questId', getChannelQuestById);
 router.put('/:channelId/:questId', updateChannelQuest);
 router.delete('/:channelId/:questId', deleteChannelQuest);
 
-router.put('/:channelId/:questId/complete', completeChannelQuest);
+router.put('/:channelId/:questId/:userId/complete', completeChannelQuest);
 router.put('/:channelId/:questId/uncomplete', uncompleteChannelQuest);
 router.put('/:channelId/:questId/undelete', undeleteChannelQuest);
 router.post('/:channelId/:questId/tag', addTagToChannelQuest);
