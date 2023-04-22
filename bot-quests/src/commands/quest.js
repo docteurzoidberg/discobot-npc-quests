@@ -517,11 +517,9 @@ async function getUserName(client, userNameOrId) {
 }
 
 async function getUserNames(client, usersOrIds) {
-  const users = await Promise.all(
-    usersOrIds.map(async (userNameOrId) => {
-      return getUserName(client, userNameOrId);
-    })
-  );
+  const users = usersOrIds.map(async (userNameOrId) => {
+    return await getUserName(client, userNameOrId);
+  });
   return users;
 }
 
