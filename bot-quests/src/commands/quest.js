@@ -530,14 +530,14 @@ function _formatAutocompleteQuest(quest) {
   };
 }
 
-async function getUserName(client, userNameOrId) {
+function getUserName(client, userNameOrId) {
   const unknown = 'Utilisateur inconnu';
   if (!userNameOrId) {
     return unknown;
   }
   if (userNameOrId.match(/^[0-9]+$/)) {
     try {
-      const user = await client.users.cache.get(userNameOrId);
+      const user = client.users.cache.get(userNameOrId);
       return user.username;
     } catch (error) {
       return unknown;
@@ -546,9 +546,9 @@ async function getUserName(client, userNameOrId) {
   return userNameOrId;
 }
 
-async function getUserNames(client, usersOrIds) {
-  const users = usersOrIds.map(async (userNameOrId) => {
-    return await getUserName(client, userNameOrId);
+function getUserNames(client, usersOrIds) {
+  const users = usersOrIds.map((userNameOrId) => {
+    return getUserName(client, userNameOrId);
   });
   return users;
 }
@@ -715,8 +715,8 @@ async function commandShow(client, interaction, ephemeral = true) {
     const quest = await api.getChannelQuestById(channelId, id);
 
     //replace users ids by names
-    quest.players = await getUserNames(client, quest.players || []);
-    quest.createdBy = await getUserName(client, quest.createdBy || 'Inconnu');
+    quest.players = getUserNames(client, quest.players || []);
+    quest.createdBy = getUserName(client, quest.createdBy || 'Inconnu');
 
     client.logger.debug(quest);
     let msg = short
