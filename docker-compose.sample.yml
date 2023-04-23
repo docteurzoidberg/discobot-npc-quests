@@ -54,3 +54,20 @@ services:
     depends_on:
       - api
     restart: unless-stopped
+
+  www:
+    image: npc-quests-www
+    hostname: npc-quests-www
+    container_name: npc-quests-www
+    tty: true
+    build:
+      context: ./www-front
+    environment:
+      - NUXT_PUBLIC_API_URL=http://npc-quests-api:5000
+    networks:
+      - npc-quests
+    ports:
+      - 3000:3000
+    depends_on:
+      - api
+    restart: unless-stopped

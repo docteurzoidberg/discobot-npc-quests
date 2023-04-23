@@ -2,8 +2,15 @@ const userdb = require('../lib/users');
 
 const getUserIds = async (req, res) => {
   const { logger } = req;
-  logger.info('getUsers');
+  logger.info('getUserIds');
   const users = await userdb.getUserIds();
+  res.json(users);
+};
+
+const getUsers = async (req, res) => {
+  const { logger } = req;
+  logger.info('getUsers');
+  const users = await userdb.getUsers();
   res.json(users);
 };
 
@@ -26,6 +33,7 @@ const setUserSettings = async (req, res) => {
 
 const router = require('express').Router();
 //router.get('/', getUserIds);
+router.get('/', getUsers);
 router.get('/:userId/settings', getUserSettings);
 router.put('/:userId/settings', setUserSettings);
 module.exports = router;
