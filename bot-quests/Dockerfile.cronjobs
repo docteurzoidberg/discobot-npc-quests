@@ -1,0 +1,34 @@
+FROM node:18-alpine
+
+ENV NODE_ENV production
+ENV LANG C.UTF-8
+ENV EDITOR nano
+
+RUN apk add dumb-init
+RUN mkdir /data
+
+# APP dir
+WORKDIR /app
+
+# NODE_MODULES
+COPY package*.json ./
+RUN npm install --production
+RUN npm install -g pino-pretty
+
+# APP
+COPY . .
+
+RUN mkdir /app/bin
+RUN touch /app/bin/resetdaily.sh
+RUN echo "#!/bin/bash" >> /app/bin/resetdaily.sh
+RUN echo "cd /app" >> /app/bin/resetdaily.sh
+RUN echo "npm run resetdaily" >> /app/bin/resetdaily.sh
+RUN chmod +x /app/bin/resetdaily.sh
+
+RUN touch /etc/crontabs/root
+RUN echo "0 0 * * * /app/bin/resetdaily.sh" >> /etc/crontabs/root
+RUN echo "# m h  dom mon dow   command" >> /etc/crontabs/root
+RUN echo "" >> /etc/crontabs/root
+
+# start crond with log level 8 in foreground, output to stderr
+CMD ["crond", "-f", "-d", "8"]

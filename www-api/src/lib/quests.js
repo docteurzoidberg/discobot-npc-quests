@@ -404,6 +404,30 @@ async function uncompleteChannelQuest(channelId, questId) {
   return quest;
 }
 
+async function resetChannelDailyQuests(channelId) {
+  _checkChannelId(channelId);
+  const db = await _loadChannelDatabase(channelId);
+  _checkChannelDatabase(db);
+
+  //daily quests resets at midnight
+  //reset datecomplete to every daily quest from yesterday and before
+
+  const dateNow = new Date();
+  db.quests.forEach((quest, index) => {
+    if (!quest.daily) {
+      return;
+    }
+    if (!quest.dateCompleted) {
+      return;
+    }
+    if (quest.dateCompleted < dateNow) {
+      quest.dateCompleted = null;
+      db.quests[index] = quest;
+    }
+  });
+  await _saveChannelDatabase(channelId, db);
+}
+
 module.exports = {
   getChannelsIds,
   getChannelQuestById,
@@ -417,4 +441,5 @@ module.exports = {
   undeleteChannelQuest,
   addTagToChannelQuest,
   removeTagFromChannelQuest,
+  resetChannelDailyQuests,
 };

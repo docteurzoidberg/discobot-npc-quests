@@ -4,6 +4,17 @@ const API_URL = process.env.API_URL || false;
 
 const fetch = require('node-fetch');
 
+async function resetDailyQuestsInChannel(channelId) {
+  const response = await fetch(`${API_URL}/quests/${channelId}/reset`, {
+    method: 'POST',
+  });
+  if (response.ok) {
+    return await response.json();
+  } else {
+    throw new Error(`API error: ${response.status} ${response.statusText}`);
+  }
+}
+
 async function getChannelsWithQuests() {
   const response = await fetch(`${API_URL}/channels`);
   if (response.ok) {
@@ -161,4 +172,5 @@ module.exports = {
   uncompleteChannelQuest,
   deleteChannelQuest,
   undeleteChannelQuest,
+  resetDailyQuestsInChannel,
 };

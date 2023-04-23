@@ -7,6 +7,7 @@
     "dev": "nodemon src/index.js --no-warning | pino-pretty",
     "start": "node src/index.js --no-warning | pino-pretty",
     "register": "node src/register.js --no-warning | pino-pretty",
+    "resetdaily": "node src/resetdaily.js --no-warning | pino-pretty",
     "testdalle": "node src/testdalle.js"
   },
   "author": "DrZoid",

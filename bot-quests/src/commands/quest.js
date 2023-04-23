@@ -7,7 +7,7 @@ const helpers = require('../lib/discobot-helpers');
 
 const commands = new SlashCommandBuilder()
   .setName('quest')
-  .setDescription('Gere les quêtes !')
+  .setDescription('Gère les quêtes !')
 
   //add
   .addSubcommand((subcommand) =>
@@ -27,13 +27,40 @@ const commands = new SlashCommandBuilder()
           .setRequired(true)
       )
       .addStringOption((option) =>
-        option.setName('give').setDescription('Récompenses')
+        option
+          .setName('give')
+          .setDescription('Récompenses ?')
+          .setRequired(false)
       )
       .addStringOption((option) =>
-        option.setName('icon').setDescription("URL de l'icone")
+        option
+          .setName('icon')
+          .setDescription("URL de l'icone ?")
+          .setRequired(false)
       )
       .addStringOption((option) =>
-        option.setName('image').setDescription("URL de l'image")
+        option
+          .setName('image')
+          .setDescription("URL de l'image ?")
+          .setRequired(false)
+      )
+      .addBooleanOption((option) =>
+        option
+          .setName('private')
+          .setDescription('Quête privée ?')
+          .setRequired(false)
+      )
+      .addBooleanOption((option) =>
+        option
+          .setName('daily')
+          .setDescription('Quête journalière ?')
+          .setRequired(false)
+      )
+      .addBooleanOption((option) =>
+        option
+          .setName('repeat')
+          .setDescription('Quête répétable ?')
+          .setRequired(false)
       )
   )
 
@@ -56,13 +83,31 @@ const commands = new SlashCommandBuilder()
         option.setName('description').setDescription('Description de la quête')
       )
       .addStringOption((option) =>
-        option.setName('image').setDescription("URL de l'image")
+        option.setName('give').setDescription('Récompense(s) ?')
       )
       .addStringOption((option) =>
-        option.setName('icon').setDescription("URL de l'icone")
+        option.setName('image').setDescription("URL de l'image ?")
       )
       .addStringOption((option) =>
-        option.setName('give').setDescription('Récompense(s)')
+        option.setName('icon').setDescription("URL de l'icone ?")
+      )
+      .addBooleanOption((option) =>
+        option
+          .setName('private')
+          .setDescription('Quête privée ?')
+          .setRequired(false)
+      )
+      .addBooleanOption((option) =>
+        option
+          .setName('daily')
+          .setDescription('Quête journalière ?')
+          .setRequired(false)
+      )
+      .addBooleanOption((option) =>
+        option
+          .setName('repeat')
+          .setDescription('Quête répétable ?')
+          .setRequired(false)
       )
   )
 
@@ -411,19 +456,105 @@ const _formatQuestListItem = (quest) => {
   return `${questId}${questCompleted} ${striked}[${title}]${tagsText}${striked}`;
 };
 
-function _formatQuestMessage(quest) {
-  let msg = _formatQuestListItem(quest);
-  let players = quest.players || [];
-  let give = quest.give || '';
-  let image = quest.image || '';
-  //todo
-  return '';
-}
+const _formatQuestTitle = (title) => {
+  let questTitle = title || '';
+  //if empty title, use "Sans titre"
+  if (questTitle === '') {
+    questTitle = '*Sans titre*';
+  }
+  return `[${helpers.preventEmbed(questTitle)}]`;
+};
 
-function _formatQuestEmbedShort(quest) {
+//format user settings for display in message
+/*
+Annoncer:
+✅ **Création**
+❌ **Modification**
+❌ **Validation**
+❌ **Annulation de validation**
+❌ **Suppression**
+❌ **Annulation de suppression**
+Public:
+**Nom**: John Zoidberg
+**Avatar**: <https://cdn.discordapp.com/avatars/123456789012345678/123456789012345678.png>
+*/
+const _formatSettings = (settings) => {
+  const announceCreate = settings.ANNOUNCE_CREATE ? '✅' : '❌';
+  const announceUpdate = settings.ANNOUNCE_UPDATE ? '✅' : '❌';
+  const announceComplete = settings.ANNOUNCE_COMPLETE ? '✅' : '❌';
+  const announceUncomplete = settings.ANNOUNCE_UNCOMPLETE ? '✅' : '❌';
+  const announceDelete = settings.ANNOUNCE_DELETE ? '✅' : '❌';
+  const announceUndelete = settings.ANNOUNCE_UNDELETE ? '✅' : '❌';
+  const announceSettingsText = `Annoncer:\n${announceCreate} **Création**\n${announceUpdate} **Modification**\n${announceComplete} **Validation**\n${announceUncomplete} **Annulation de validation**\n${announceDelete} **Suppression**\n${announceUndelete} **Annulation de suppression** `;
+  const publicSettingsText = `Public:\n**Nom**: ${settings.PUBLIC_NAME}\n**Avatar**: ${settings.PUBLIC_AVATAR}`;
+  return `${announceSettingsText}\n\n${publicSettingsText}`;
+};
+//format quest for display in autocomplete prompt
+/* XX Titre */
+const _formatAutocompleteQuest = (quest) => {
+  let questTitle = quest.title || '';
+  //if empty title, use "Sans titre"
+  if (questTitle === '') {
+    questTitle = '*Sans titre*';
+  }
+  const title = helpers.preventEmbed(questTitle);
+  return {
+    name: `${quest.id} ${title}`,
+    value: quest.id.toLocaleUpperCase(),
+  };
+};
+
+const _formatAutocompleteChannel = (channel) => {
+  return {
+    name: `#${
+      channel.name.length > 24
+        ? channel.name.substring(0, 21) + '...'
+        : channel.name
+    }}`,
+    value: channel.id,
+  };
+};
+
+const _formatAutocompleteUser = (user) => {
+  return {
+    name: user.username,
+    value: user.id,
+  };
+};
+
+const _getUserName = (client, userNameOrId) => {
+  const unknown = 'Utilisateur inconnu';
+  if (!userNameOrId) {
+    return unknown;
+  }
+  if (userNameOrId.match(/^[0-9]+$/)) {
+    try {
+      const user = client.users.cache.get(userNameOrId);
+      return user.username;
+    } catch (error) {
+      return unknown;
+    }
+  }
+  return userNameOrId;
+};
+
+const _getUserNames = (client, usersOrIds) => {
+  const users = usersOrIds.map((userNameOrId) => {
+    return _getUserName(client, userNameOrId);
+  });
+  return users;
+};
+
+const _generateDallePrompt = (title) => {
+  const prompt = `imagine un personnage de jeu rpg en style pixel-art vue top-down, qui est en train d'accomplir la quête intitulée [${title}]`;
+  return prompt;
+};
+
+const _generateQuestEmbedShort = (quest) => {
   let title = quest.title || '*Sans titre*';
   let description = quest.description || '*Aucune description*';
-  let icon = quest.icon || quest.image || '';
+  let icon = quest.icon || '';
+  let image = quest.image || '';
   let players = quest.players || [];
   const color = quest.dateCompleted ? 0x00ff00 : helpers.colorFromId(quest.id);
   const footerStatus = quest.dateCompleted ? '✅ Accompli par' : '✎ Crée par';
@@ -437,19 +568,22 @@ function _formatQuestEmbedShort(quest) {
       ? helpers.parseDate(quest.dateCompleted)
       : helpers.parseDate(quest.dateCreated);
 
-  let msgEmbed = new EmbedBuilder()
+  const msgEmbed = new EmbedBuilder()
     .setTitle(title)
     .setDescription(description)
     .setColor(color)
     .setFooter({ text: footer })
     .setTimestamp(timestamp);
 
-  if (icon) {
+  if (icon !== '') {
     msgEmbed.setThumbnail(icon);
+  } else if (image !== '') {
+    msgEmbed.setThumbnail(image);
   }
-}
+  return msgEmbed;
+};
 
-function _formatQuestEmbed(quest, short = false) {
+const _generateQuestEmbed = (quest) => {
   let title = quest.title || '*Sans titre*';
   let description = quest.description || '*Aucune description*';
   let image = quest.image || '';
@@ -469,10 +603,7 @@ function _formatQuestEmbed(quest, short = false) {
       ? helpers.parseDate(quest.dateCompleted)
       : helpers.parseDate(quest.dateCreated);
 
-  //TODO
-
-  //set thumbnail to image if image is set only
-  let msgEmbed = new EmbedBuilder()
+  const msgEmbed = new EmbedBuilder()
     .setTitle(title)
     .setDescription(description)
     //.addField('Donne', give, true)
@@ -482,7 +613,7 @@ function _formatQuestEmbed(quest, short = false) {
     .setFooter({ text: footer })
     .setTimestamp(timestamp);
 
-  if (!short && quest.dateCompleted) {
+  if (quest.dateCompleted) {
     msgEmbed.addFields(
       {
         name: 'Créé',
@@ -497,66 +628,15 @@ function _formatQuestEmbed(quest, short = false) {
     );
   }
 
-  if (!short && image !== '') {
+  //quest image => image is not empety else icon if not empty else nothing?
+  //TODO: reflechir images/icones
+  const embedImage = image !== '' ? image : icon !== '' ? icon : '';
+  if (embedImage !== '') {
     msgEmbed.setImage(image);
   }
 
-  if (icon !== '') {
-    msgEmbed.setThumbnail(icon);
-  }
-
   return msgEmbed;
-}
-
-function _formatQuestTitle(title) {
-  let questTitle = title || '';
-  //if empty title, use "Sans titre"
-  if (questTitle === '') {
-    questTitle = '*Sans titre*';
-  }
-  return `[${helpers.preventEmbed(questTitle)}]`;
-}
-
-function _formatAutocompleteQuest(quest) {
-  let questTitle = quest.title || '';
-  //if empty title, use "Sans titre"
-  if (questTitle === '') {
-    questTitle = '*Sans titre*';
-  }
-  const title = helpers.preventEmbed(questTitle);
-  return {
-    name: `${quest.id} ${title}`,
-    value: quest.id.toLocaleUpperCase(),
-  };
-}
-
-function getUserName(client, userNameOrId) {
-  const unknown = 'Utilisateur inconnu';
-  if (!userNameOrId) {
-    return unknown;
-  }
-  if (userNameOrId.match(/^[0-9]+$/)) {
-    try {
-      const user = client.users.cache.get(userNameOrId);
-      return user.username;
-    } catch (error) {
-      return unknown;
-    }
-  }
-  return userNameOrId;
-}
-
-function getUserNames(client, usersOrIds) {
-  const users = usersOrIds.map((userNameOrId) => {
-    return getUserName(client, userNameOrId);
-  });
-  return users;
-}
-
-function generateDallePrompt(title) {
-  const prompt = `imagine un personnage de jeu rpg en style pixel-art vue top-down, qui est en train d'accomplir la quête intitulée [${title}]`;
-  return prompt;
-}
+};
 
 async function commandAdd(client, interaction) {
   const userName = client.users.cache.get(interaction.user.id).username; //TODO: check if user exists
@@ -569,11 +649,14 @@ async function commandAdd(client, interaction) {
   let icon = interaction.options.getString('icon') || '';
   let give = interaction.options.getString('give') || '';
   const private = interaction.options.getBoolean('private') || false;
+  const daily = interaction.options.getBoolean('daily') || false;
+  const repeat = interaction.options.getBoolean('repeat') || false;
+
   let deferred = false;
 
   //Autogen images with dall-e?
   if (client.config.USE_DALLE && (image === '' || icon === '')) {
-    const prompt = generateDallePrompt(title);
+    const prompt = _generateDallePrompt(title);
 
     //take long time so tell discord
     deferred = true;
@@ -596,6 +679,8 @@ async function commandAdd(client, interaction) {
     image: image,
     icon: icon,
     give: give,
+    daily: daily,
+    repeat: repeat,
     private: private,
     players: [userId],
   };
@@ -646,7 +731,9 @@ async function commandUpdate(client, interaction) {
   const give = interaction.options.getString('give') || false;
   const image = interaction.options.getString('image') || false;
   const icon = interaction.options.getString('icon') || false;
-  const private = interaction.options.getBoolean('private') || false;
+  const private = interaction.options.getBoolean('private');
+  const daily = interaction.options.getBoolean('daily');
+  const repeat = interaction.options.getBoolean('repeat');
 
   const optionnalNull = (value) => {
     switch (value) {
@@ -685,9 +772,10 @@ async function commandUpdate(client, interaction) {
     if (icon !== false) {
       quest.icon = optionnalNull(icon);
     }
-    if (private !== false) {
-      quest.private = private;
-    }
+
+    if (private !== undefined) quest.private = private;
+    if (daily !== undefined) quest.daily = daily;
+    if (repeat !== undefined) quest.repeat = repeat;
 
     const updatedQuest = await api.updateChannelQuest(channelId, id, quest);
     client.logger.debug(updatedQuest);
@@ -715,14 +803,16 @@ async function commandShow(client, interaction, ephemeral = true) {
     const quest = await api.getChannelQuestById(channelId, id);
 
     //replace users ids by names
-    quest.players = getUserNames(client, quest.players || []);
-    quest.createdBy = getUserName(client, quest.createdBy || 'Inconnu');
+    quest.players = _getUserNames(client, quest.players || []);
+    quest.createdBy = _getUserName(client, quest.createdBy || 'Inconnu');
 
     client.logger.debug(quest);
-    let msg = short
+    const msg = short
       ? ''
       : `${interaction.member} souhaite vous montrer cette quête:`;
-    let embed = _formatQuestEmbed(quest, short);
+    const embed = short
+      ? _generateQuestEmbedShort(quest)
+      : _generateQuestEmbed(quest);
     interaction.reply({
       content: msg,
       embeds: [embed],
@@ -833,10 +923,11 @@ async function commandComplete(client, interaction) {
       return;
     }
 
-    //deja complete
-    if (quest.dateCompleted) {
+    //deja completée et pas répétable
+    if (quest.dateCompleted && !quest.repeat) {
+      const canCompleteMsg = quest.daily ? "(aujourd'hui)" : '';
       interaction.reply({
-        content: `Quête [${questId}] déjà terminée !`,
+        content: `Quête [${questId}] déjà terminée ${canCompleteMsg}!`,
         ephemeral: true,
       });
       return;
@@ -952,6 +1043,8 @@ async function commandUndelete(client, interaction) {
   }
 }
 
+/* Autocomplete Methods */
+
 async function autocompleteGetAllQuestIds(client, interaction) {
   const quests = await api.getChannelQuests(interaction.channel.id);
   //sort by most recent first
@@ -1010,17 +1103,6 @@ async function autocompleteGetCompletedQuestIds(client, interaction) {
     .map((quest) => _formatAutocompleteQuest(quest));
 }
 
-function _formatAutocompleteChannel(channel) {
-  return {
-    name: `#${
-      channel.name.length > 24
-        ? channel.name.substring(0, 21) + '...'
-        : channel.name
-    }}`,
-    value: channel.id,
-  };
-}
-
 //return all current interaction guild 's channels with at least one quest
 async function autocompleteGetAllChannelsWithQuests(client, interaction) {
   const channelsIdWithQuests = await api.getChannelsWithQuests();
@@ -1047,13 +1129,6 @@ async function autocompleteGetAllChannels(client, interaction) {
   return channels.map((channel) => _formatAutocompleteChannel(channel));
 }
 
-function _formatAutocompleteUser(user) {
-  return {
-    name: user.username,
-    value: user.id,
-  };
-}
-
 async function autocompleteGetAllUsers(client, interaction) {
   const users = client.users.cache;
   return users.map(async (user) => {
@@ -1065,31 +1140,7 @@ async function autocompleteGetAllUsers(client, interaction) {
   });
 }
 
-//format user settings for display in message
-/*
-Annoncer:
-✅ **Création**
-❌ **Modification**
-❌ **Validation**
-❌ **Annulation de validation**
-❌ **Suppression**
-❌ **Annulation de suppression**
-Public:
-**Nom**: John Zoidberg
-**Avatar**: <https://cdn.discordapp.com/avatars/123456789012345678/123456789012345678.png>
-*/
-
-const formatSettings = (settings) => {
-  const announceCreate = settings.ANNOUNCE_CREATE ? '✅' : '❌';
-  const announceUpdate = settings.ANNOUNCE_UPDATE ? '✅' : '❌';
-  const announceComplete = settings.ANNOUNCE_COMPLETE ? '✅' : '❌';
-  const announceUncomplete = settings.ANNOUNCE_UNCOMPLETE ? '✅' : '❌';
-  const announceDelete = settings.ANNOUNCE_DELETE ? '✅' : '❌';
-  const announceUndelete = settings.ANNOUNCE_UNDELETE ? '✅' : '❌';
-  const announceSettingsText = `Annoncer:\n${announceCreate} **Création**\n${announceUpdate} **Modification**\n${announceComplete} **Validation**\n${announceUncomplete} **Annulation de validation**\n${announceDelete} **Suppression**\n${announceUndelete} **Annulation de suppression** `;
-  const publicSettingsText = `Public:\n**Nom**: ${settings.PUBLIC_NAME}\n**Avatar**: ${settings.PUBLIC_AVATAR}`;
-  return `${announceSettingsText}\n\n${publicSettingsText}`;
-};
+/* Command Methods */
 
 async function commandSettingsAnnounceCreate(client, interaction) {
   const value = interaction.options.getBoolean('value');
@@ -1268,7 +1319,7 @@ async function commandSettingsList(client, interaction) {
     interaction.reply({
       content: `Paramètres de ${helpers.formatUsername(
         userName
-      )} : ${formatSettings(settings)}`,
+      )} : ${_formatSettings(settings)}`,
       ephemeral: true,
     });
   } catch (error) {
@@ -1327,6 +1378,8 @@ async function commandPlayerRemove(client, interaction) {
     client.logger.debug(error.stack);
   }
 }
+
+/* Module exports */
 
 module.exports = {
   data: commands,

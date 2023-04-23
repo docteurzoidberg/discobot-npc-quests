@@ -96,6 +96,12 @@ const getChannelQuests = async (req, res) => {
   res.json(quests);
 };
 
+const resetChannelDailyQuests = async (req, res) => {
+  const { channelId } = req.params;
+  const quests = await questsdb.resetChannelDailyQuests(channelId);
+  res.json(quests);
+};
+
 const router = require('express').Router();
 
 router.get('/:channelId/:questId', getChannelQuestById);
@@ -112,5 +118,6 @@ router.delete('/:channelId/:questId/tag', removeTagFromChannelQuest);
 router.get('/:channelId/public', getChannelPublicQuests);
 router.get('/:channelId', getChannelQuests);
 router.post('/:channelId', addChannelQuest);
+router.post('/:channelId/reset', resetChannelDailyQuests);
 
 module.exports = router;
