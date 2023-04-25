@@ -561,7 +561,7 @@ const _formatAutocompleteUser = (user) => {
   };
 };
 
-const _getUserName = (client, userNameOrId) => {
+const _getUserName = async (client, userNameOrId) => {
   const unknown = 'Utilisateur inconnu';
   if (!userNameOrId) {
     return unknown;
@@ -569,6 +569,10 @@ const _getUserName = (client, userNameOrId) => {
   if (userNameOrId.match(/^[0-9]+$/)) {
     try {
       const user = client.users.cache.get(userNameOrId);
+      if (!user) {
+        const fetchedUser = await client.users.fetch(userNameOrId);
+        return fetchedUser.username;
+      }
       return user.username;
     } catch (error) {
       return unknown;
@@ -577,7 +581,7 @@ const _getUserName = (client, userNameOrId) => {
   return userNameOrId;
 };
 
-const _getUserTag = (client, userNameOrId) => {
+const _getUserTag = async (client, userNameOrId) => {
   const unknown = 'Utilisateur inconnu';
   if (!userNameOrId) {
     return unknown;
@@ -585,6 +589,10 @@ const _getUserTag = (client, userNameOrId) => {
   if (userNameOrId.match(/^[0-9]+$/)) {
     try {
       const user = client.users.cache.get(userNameOrId);
+      if (!user) {
+        const userFetch = await client.users.fetch(userNameOrId);
+        return `<@${userFetch.id}>`;
+      }
       return `<@${user.id}>`;
     } catch (error) {
       return unknown;
@@ -594,15 +602,15 @@ const _getUserTag = (client, userNameOrId) => {
 };
 
 const _getUserNames = (client, usersOrIds) => {
-  const users = usersOrIds.map((userNameOrId) => {
-    return _getUserName(client, userNameOrId);
+  const users = usersOrIds.map(async (userNameOrId) => {
+    return await _getUserName(client, userNameOrId);
   });
   return users;
 };
 
 const _getUserTags = (client, usersOrIds) => {
-  const users = usersOrIds.map((userNameOrId) => {
-    return _getUserTag(client, userNameOrId);
+  const users = usersOrIds.map(async (userNameOrId) => {
+    return await _getUserTag(client, userNameOrId);
   });
   return users;
 };
@@ -612,7 +620,7 @@ const _generateDallePrompt = (title) => {
   return prompt;
 };
 
-const _generateQuestEmbedShort = (client, interaction, quest) => {
+const _generateQuestEmbedShort = async (client, interaction, quest) => {
   let title = helpers.preventEmbed(quest.title) || '*Sans titre*';
   let description = quest.description || '*Aucune description*';
   let icon = quest.icon || '';
@@ -631,8 +639,8 @@ const _generateQuestEmbedShort = (client, interaction, quest) => {
   const color = quest.dateCompleted ? 0x00ff00 : helpers.colorFromId(quest.id);
   const footerUser =
     quest.dateCompleted && completedByUser
-      ? _getUserName(client, completedByUser)
-      : _getUserName(client, createdByUser);
+      ? await _getUserName(client, completedByUser)
+      : await _getUserName(client, createdByUser);
   const footerStatus =
     quest.dateCompleted && completedByUser ? '✅ accompli par' : '⭐ créée par';
   const footerOptions = options.join(' ') + '\n';

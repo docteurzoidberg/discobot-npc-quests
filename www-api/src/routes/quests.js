@@ -125,10 +125,13 @@ router.get('/:channelId/:questId', getChannelQuestById);
 router.put('/:channelId/:questId', updateChannelQuest);
 router.delete('/:channelId/:questId', deleteChannelQuest);
 
-router.put('/:channelId/:questId/:userId', addPlayerToQuest);
-router.delete('/:channelId/:questId/:userId', removePlayerFromQuest);
+router.put('/:channelId/:questId/addplayer/:userId', addPlayerToQuest);
+router.delete(
+  '/:channelId/:questId/removeplayer/:userId',
+  removePlayerFromQuest
+);
 
-router.put('/:channelId/:questId/:userId/complete', completeChannelQuest);
+router.put('/:channelId/:questId/complete/:userId', completeChannelQuest);
 router.put('/:channelId/:questId/uncomplete', uncompleteChannelQuest);
 router.put('/:channelId/:questId/undelete', undeleteChannelQuest);
 router.post('/:channelId/:questId/tag', addTagToChannelQuest);

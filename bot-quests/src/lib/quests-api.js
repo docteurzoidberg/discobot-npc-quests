@@ -100,7 +100,7 @@ async function updateChannelQuest(channelId, questId, quest) {
 
 async function completeChannelQuest(channelId, questId, userId) {
   const response = await fetch(
-    `${API_URL}/quests/${channelId}/${questId}/${userId}/complete`,
+    `${API_URL}/quests/${channelId}/${questId}/complete/${userId}`,
     {
       method: 'PUT',
       headers: {
@@ -162,7 +162,7 @@ async function deleteChannelQuest(channelId, questId) {
 
 async function addPlayerToQuest(channelId, questId, userId) {
   const response = await fetch(
-    `${API_URL}/quests/${channelId}/${questId}/${userId}`,
+    `${API_URL}/quests/${channelId}/${questId}/addplayer/${userId}`,
     {
       method: 'PUT',
     }
@@ -176,7 +176,7 @@ async function addPlayerToQuest(channelId, questId, userId) {
 
 async function removePlayerFromQuest(channelId, questId, userId) {
   const response = await fetch(
-    `${API_URL}/quests/${channelId}/${questId}/${userId}`,
+    `${API_URL}/quests/${channelId}/${questId}/removeplayer/${userId}`,
     {
       method: 'DELETE',
     }
