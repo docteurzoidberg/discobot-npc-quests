@@ -160,6 +160,34 @@ async function deleteChannelQuest(channelId, questId) {
   }
 }
 
+async function addPlayerToQuest(channelId, questId, userId) {
+  const response = await fetch(
+    `${API_URL}/quests/${channelId}/${questId}/${userId}`,
+    {
+      method: 'PUT',
+    }
+  );
+  if (response.ok) {
+    return await response.json();
+  } else {
+    throw new Error(`API error: ${response.status} ${response.statusText}`);
+  }
+}
+
+async function removePlayerFromQuest(channelId, questId, userId) {
+  const response = await fetch(
+    `${API_URL}/quests/${channelId}/${questId}/${userId}`,
+    {
+      method: 'DELETE',
+    }
+  );
+  if (response.ok) {
+    return await response.json();
+  } else {
+    throw new Error(`API error: ${response.status} ${response.statusText}`);
+  }
+}
+
 module.exports = {
   getChannelsWithQuests,
   getUserSettings,
@@ -173,4 +201,6 @@ module.exports = {
   deleteChannelQuest,
   undeleteChannelQuest,
   resetDailyQuestsInChannel,
+  addPlayerToQuest,
+  removePlayerFromQuest,
 };

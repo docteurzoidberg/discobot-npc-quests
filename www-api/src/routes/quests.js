@@ -102,12 +102,31 @@ const resetChannelDailyQuests = async (req, res) => {
   res.json(quests);
 };
 
+const addPlayerToQuest = async (req, res) => {
+  const { channelId, questId, userId } = req.params;
+  const quest = await questsdb.addPlayerToQuest(channelId, questId, userId);
+  res.json(quest);
+};
+
+const removePlayerFromQuest = async (req, res) => {
+  const { channelId, questId, userId } = req.params;
+  const quest = await questsdb.removePlayerFromQuest(
+    channelId,
+    questId,
+    userId
+  );
+  res.json(quest);
+};
+
 const router = require('express').Router();
 
 router.get('/:channelId/:questId', getChannelQuestById);
 
 router.put('/:channelId/:questId', updateChannelQuest);
 router.delete('/:channelId/:questId', deleteChannelQuest);
+
+router.put('/:channelId/:questId/:userId', addPlayerToQuest);
+router.delete('/:channelId/:questId/:userId', removePlayerFromQuest);
 
 router.put('/:channelId/:questId/:userId/complete', completeChannelQuest);
 router.put('/:channelId/:questId/uncomplete', uncompleteChannelQuest);

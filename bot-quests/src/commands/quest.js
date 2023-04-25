@@ -5,6 +5,19 @@ const api = require('../lib/quests-api');
 const dalle = require('../lib/openai-dall-e');
 const helpers = require('../lib/discobot-helpers');
 
+//emojis
+
+//calendar emoji
+//📅
+//exclamation emoji
+//❗️
+//lock emoji
+//🔒
+//plus emoji
+//➕
+//check emoji
+//✅
+
 const commands = new SlashCommandBuilder()
   .setName('quest')
   .setDescription('Gère les quêtes !')
@@ -167,13 +180,19 @@ const commands = new SlashCommandBuilder()
           .setRequired(false)
           .setAutocomplete(true)
       )
+      .addBooleanOption((option) =>
+        option
+          .setName('show')
+          .setDescription('Afficher la liste dans le channel ?')
+          .setRequired(false)
+      )
   )
 
-  //info
+  //preview
   .addSubcommand((subcommand) =>
     subcommand
-      .setName('info')
-      .setDescription("Afficher les informations d'une quête")
+      .setName('preview')
+      .setDescription('Afficher la quête en privé')
       .addStringOption((option) =>
         option
           .setName('id')
@@ -181,8 +200,22 @@ const commands = new SlashCommandBuilder()
           .setRequired(true)
           .setAutocomplete(true)
       )
+      .addStringOption((option) =>
+        option
+          .setName('channel')
+          .setDescription(
+            'Choisir un autre channel/thread que celui de la commande'
+          )
+          .setRequired(false)
+          .setAutocomplete(true)
+      )
+      .addBooleanOption((option) =>
+        option
+          .setName('full')
+          .setDescription('Afficher en mode detaillé ?')
+          .setRequired(false)
+      )
   )
-
   //show
   .addSubcommand((subcommand) =>
     subcommand
@@ -195,19 +228,21 @@ const commands = new SlashCommandBuilder()
           .setRequired(true)
           .setAutocomplete(true)
       )
+      .addStringOption((option) =>
+        option
+          .setName('channel')
+          .setDescription(
+            'Choisir un autre channel/thread que celui de la commande'
+          )
+          .setRequired(false)
+          .setAutocomplete(true)
+      )
       .addBooleanOption((option) =>
         option
-          .setName('short')
-          .setDescription('Afficher en mode court')
+          .setName('full')
+          .setDescription('Afficher en mode detaillé ?')
           .setRequired(false)
       )
-  )
-
-  //showlist
-  .addSubcommand((subcommand) =>
-    subcommand
-      .setName('showlist')
-      .setDescription('Afficher la liste des quêtes dans le channel/thread')
   )
 
   //complete
@@ -444,16 +479,20 @@ const _formatQuestListItem = (quest) => {
 
   const showId = true; //todo
   const questId = showId ? `${_formatQuestId(quest.id)}>` : '';
-  // complete or incomplete
+
   const questCompleted = quest.dateCompleted ? '☑' : '☐';
-  // lock if private
-  const questPrivate = quest.private ? ' 🔒' : '';
+  const questPrivate = quest.private ? '🔒' : '';
+  //const questWeekly = quest.weekly ? '📆' : '';
+  const questDaily = quest.daily ? '📅' : '';
+  const questRepeat = quest.repeat ? '🔄' : '';
+
+  const questMembers = (quest.players || []).length > 1 ? ' 👥' : '';
 
   // strike through if completed
   const striked = quest.dateCompleted ? '~~' : '';
   const tagsText = tagsArray.length > 0 ? ` ${_formatTags(tagsArray)}` : '';
 
-  return `${questId}${questCompleted} ${striked}[${title}]${tagsText}${striked}`;
+  return `${questId} ${questCompleted} ${striked}[${title}]${tagsText}${striked} ${questPrivate}${questMembers}${questDaily}${questRepeat}`;
 };
 
 const _formatQuestTitle = (title) => {
@@ -538,9 +577,32 @@ const _getUserName = (client, userNameOrId) => {
   return userNameOrId;
 };
 
+const _getUserTag = (client, userNameOrId) => {
+  const unknown = 'Utilisateur inconnu';
+  if (!userNameOrId) {
+    return unknown;
+  }
+  if (userNameOrId.match(/^[0-9]+$/)) {
+    try {
+      const user = client.users.cache.get(userNameOrId);
+      return `<@${user.id}>`;
+    } catch (error) {
+      return unknown;
+    }
+  }
+  return userNameOrId;
+};
+
 const _getUserNames = (client, usersOrIds) => {
   const users = usersOrIds.map((userNameOrId) => {
     return _getUserName(client, userNameOrId);
+  });
+  return users;
+};
+
+const _getUserTags = (client, usersOrIds) => {
+  const users = usersOrIds.map((userNameOrId) => {
+    return _getUserTag(client, userNameOrId);
   });
   return users;
 };
@@ -550,18 +612,46 @@ const _generateDallePrompt = (title) => {
   return prompt;
 };
 
-const _generateQuestEmbedShort = (quest) => {
-  let title = quest.title || '*Sans titre*';
+const _generateQuestEmbedShort = (client, interaction, quest) => {
+  let title = helpers.preventEmbed(quest.title) || '*Sans titre*';
   let description = quest.description || '*Aucune description*';
   let icon = quest.icon || '';
   let image = quest.image || '';
   let players = quest.players || [];
+
+  const options = [];
+  if (quest.private) options.push('🔒 privée');
+  if (quest.daily) options.push('📅 journalière');
+  if (quest.repeat) options.push('🔁 répétable');
+  if (players.length > 1) options.push('👥 groupe');
+
+  const createdByUser = quest.createdBy || false;
+  const completedByUser = quest.completedBy || false;
+
   const color = quest.dateCompleted ? 0x00ff00 : helpers.colorFromId(quest.id);
-  const footerStatus = quest.dateCompleted ? '✅ Accompli par' : '✎ Crée par';
-  const footerPrivate = quest.private ? ' 🔒' : '';
-  const footer = `${footerStatus} ${players
-    .map((player) => player)
-    .join(', ')}${footerPrivate}`;
+  const footerUser =
+    quest.dateCompleted && completedByUser
+      ? _getUserName(client, completedByUser)
+      : _getUserName(client, createdByUser);
+  const footerStatus =
+    quest.dateCompleted && completedByUser ? '✅ accompli par' : '⭐ créée par';
+  const footerOptions = options.join(' ') + '\n';
+
+  const descriptionPlayerEmoji = players.length > 1 ? '👥' : '👤';
+  const descriptionPlayers =
+    players.length > 1
+      ? _getUserTags(client, players).join(', ')
+      : _getUserTag(client, players[0]);
+
+  description = `${description}\n\n${descriptionPlayerEmoji} ${descriptionPlayers}`;
+  const footerPlayers = '';
+
+  //const footerPlayers =
+  //  players.length > 1
+  //    ? `👤 ${_getUserNames(client, players).join(', ')}\n`
+  //   : '';
+
+  const footer = `${footerOptions}${footerPlayers}${footerStatus} ${footerUser}`;
 
   const timestamp =
     quest.dateCompleted != null
@@ -569,7 +659,7 @@ const _generateQuestEmbedShort = (quest) => {
       : helpers.parseDate(quest.dateCreated);
 
   const msgEmbed = new EmbedBuilder()
-    .setTitle(title)
+    .setTitle(`[${title}]`)
     .setDescription(description)
     .setColor(color)
     .setFooter({ text: footer })
@@ -583,20 +673,54 @@ const _generateQuestEmbedShort = (quest) => {
   return msgEmbed;
 };
 
-const _generateQuestEmbed = (quest) => {
-  let title = quest.title || '*Sans titre*';
-  let description = quest.description || '*Aucune description*';
+const _generateQuestEmbed = (client, interaction, quest) => {
+  const emojiDaily = '📅';
+  const emojiRepeat = '🔁';
+  const emojiCompleted = '✅';
+  const emojiCreated = '✎';
+  const emojiGive = '🎁';
+  const emojiPrivate = '🔒';
+  const emojiGroup = '👥';
+
+  let title = helpers.preventEmbed(quest.title) || '*Sans titre*';
+  let description =
+    helpers.preventEmbed(quest.description) || '*Aucune description*';
   let image = quest.image || '';
   let icon = quest.icon || '';
   let give = quest.give || '';
-  let players = quest.players || [];
+  let players = _getUserTags(client, quest.players || []);
 
   const color = quest.dateCompleted ? 0x00ff00 : helpers.colorFromId(quest.id);
-  const footerStatus = quest.dateCompleted ? '✅ Accompli par' : '✎ Crée par';
-  const footerPrivate = quest.private ? ' 🔒' : '';
-  const footer = `${footerStatus} ${players
-    .map((player) => player)
-    .join(', ')}${footerPrivate}`;
+
+  const createdBy = quest.createdBy || '';
+  const completedBy = quest.completedBy || '';
+
+  let createdByUser = false;
+  if (createdBy !== '') {
+    createdByUser = createdBy;
+  } else if (players.length > 0) {
+    createdByUser = players[0];
+  }
+
+  let completedByUser = false;
+  if (completedBy !== '') {
+    completedByUser = completedBy;
+  }
+
+  //TODO: utiliser createdBy / completedBy
+  const footerUser =
+    quest.dateCompleted && completedByUser
+      ? _getUserName(client, completedByUser)
+      : _getUserName(client, createdByUser);
+
+  const footerStatus =
+    quest.dateCompleted && completedByUser
+      ? `${emojiCompleted} Accompli par`
+      : `${emojiCreated} Crée par`;
+
+  const footerPrivate = quest.private ? ' ' + emojiPrivate : '';
+
+  const footer = `${footerStatus} ${footerUser}${footerPrivate}`;
 
   const timestamp =
     quest.dateCompleted != null
@@ -604,8 +728,8 @@ const _generateQuestEmbed = (quest) => {
       : helpers.parseDate(quest.dateCreated);
 
   const msgEmbed = new EmbedBuilder()
-    .setTitle(title)
-    .setDescription(description)
+    .setTitle(`[${title}]`)
+    //.setDescription(description)
     //.addField('Donne', give, true)
     //.addField('Points', points, true)
     //.addField('Joueurs', players.join(', '), true)
@@ -613,27 +737,74 @@ const _generateQuestEmbed = (quest) => {
     .setFooter({ text: footer })
     .setTimestamp(timestamp);
 
-  if (quest.dateCompleted) {
-    msgEmbed.addFields(
-      {
-        name: 'Créé',
-        value: `${helpers.formatEmbedFieldDate(quest.dateCreated)}`,
-        inline: true,
-      },
-      {
-        name: 'Accomplie',
-        value: `${helpers.formatEmbedFieldDate(quest.dateCompleted)}`,
-        inline: true,
-      }
-    );
+  let descriptionMsg = `**Description**\n${description}`;
+  /*
+  if (quest.dateCreated && createdByUser) {
+    descriptionMsg += `\n\n**Crée** le ${helpers.formatEmbedFieldDate(
+      quest.dateCompleted
+    )} par ${_getUserTag(client, completedByUser)}`;
+  }
+  if (quest.dateCompleted && completedByUser) {
+    descriptionMsg += `\n\n**Accomplie** le ${helpers.formatEmbedFieldDate(
+      quest.dateCompleted
+    )} par ${_getUserTag(client, completedByUser)}`;
+  }
+*/
+  if (quest.dateCreated && createdByUser) {
+    msgEmbed.addFields({
+      name: 'Créée',
+      value: `${helpers.formatEmbedFieldDate(quest.dateCreated)} ${_getUserTag(
+        client,
+        createdByUser
+      )}`,
+      inline: false,
+    });
+  }
+
+  if (quest.dateCompleted && completedByUser) {
+    msgEmbed.addFields({
+      name: 'Accomplie',
+      value: `${helpers.formatEmbedFieldDate(
+        quest.dateCompleted
+      )} ${_getUserTag(client, completedByUser)}`,
+      inline: false,
+    });
+  }
+
+  //add field players
+  if (players.length > 1) {
+    msgEmbed.addFields({
+      name: 'Joueurs',
+      value: `${players.join(', ')}`,
+      inline: false,
+    });
+  }
+
+  let questOptions = [];
+  if (quest.daily) questOptions.push(`${emojiDaily} Quête quotidienne`);
+  if (quest.private) questOptions.push(`${emojiPrivate} Quête privée`);
+  if (quest.repeat) questOptions.push(`${emojiRepeat} Quête répétable`);
+  if (players.length > 1) questOptions.push(`${emojiGroup} Quête de groupe`);
+  if (questOptions.length > 0) {
+    msgEmbed.addFields({
+      name: 'Options',
+      value: `${questOptions.join(' ')}`,
+    });
   }
 
   //quest image => image is not empety else icon if not empty else nothing?
   //TODO: reflechir images/icones
   const embedImage = image !== '' ? image : icon !== '' ? icon : '';
   if (embedImage !== '') {
-    msgEmbed.setImage(image);
+    msgEmbed.setImage(embedImage);
   }
+
+  const embedIcon = icon !== '' ? icon : '';
+  if (embedIcon !== '') {
+    msgEmbed.setThumbnail(embedIcon);
+  }
+
+  msgEmbed.setDescription(descriptionMsg);
 
   return msgEmbed;
 };
@@ -792,7 +963,8 @@ async function commandShow(client, interaction, ephemeral = true) {
   const channelName = interaction.channel.name;
   const channelId = interaction.channelId;
   const id = interaction.options.getString('id');
-  const short = interaction.options.getBoolean('short') || false;
+  const full = interaction.options.getBoolean('full') || false;
+  const short = !full;
   try {
     client.logger.info(
       `Affichage de la quête [${id}] dans ${helpers.formatChannelName(
@@ -803,16 +975,19 @@ async function commandShow(client, interaction, ephemeral = true) {
     const quest = await api.getChannelQuestById(channelId, id);
 
     //replace users ids by names
-    quest.players = _getUserNames(client, quest.players || []);
-    quest.createdBy = _getUserName(client, quest.createdBy || 'Inconnu');
+    //quest.players = _getUserNames(client, quest.players || []);
+    //if (quest.createdBy)
+    //  quest.createdBy = _getUserName(client, quest.createdBy);
+    //if (quest.completedBy)
+    //  quest.completedBy = _getUserName(client, quest.completedBy);
 
     client.logger.debug(quest);
     const msg = short
       ? ''
       : `${interaction.member} souhaite vous montrer cette quête:`;
     const embed = short
-      ? _generateQuestEmbedShort(quest)
-      : _generateQuestEmbed(quest);
+      ? _generateQuestEmbedShort(client, interaction, quest)
+      : _generateQuestEmbed(client, interaction, quest);
     interaction.reply({
       content: msg,
       embeds: [embed],
@@ -827,7 +1002,7 @@ async function commandShow(client, interaction, ephemeral = true) {
   }
 }
 
-async function commandList(client, interaction, ephemeral = true) {
+async function commandList(client, interaction) {
   const userName = client.users.cache.get(interaction.user.id).username;
 
   let channelId = interaction.channelId;
@@ -835,15 +1010,17 @@ async function commandList(client, interaction, ephemeral = true) {
 
   //options
   const byuser = interaction.options.getString('user') || false;
-  const bychannel = interaction.options.getString('channel') || false;
   const bytag = interaction.options.getString('tag') || false;
+  const bychannel = interaction.options.getString('channel') || false;
+  const show = interaction.options.getBoolean('show') || false;
+
+  const ephemeral = show === true ? false : true;
 
   if (bychannel !== false) {
     const channel = client.channels.cache.find(
       (channel) => channel.id === bychannel
     );
     if (channel.partial) await channel.fetch();
-
     channelId = bychannel;
     channelName = channel.name;
   }
@@ -852,9 +1029,7 @@ async function commandList(client, interaction, ephemeral = true) {
     client.logger.info(
       `Liste des quêtes de ${helpers.formatChannelName(
         channelName
-      )} demandée par ${helpers.formatUsername(userName)} ${
-        ephemeral === true ? '(en privé)' : '(en public)'
-      }`
+      )} demandée par ${helpers.formatUsername(userName)}`
     );
 
     //api call
@@ -862,7 +1037,6 @@ async function commandList(client, interaction, ephemeral = true) {
 
     //filter deleted
     const quests = questsAll.filter((quest) => !quest.dateDeleted);
-
     client.logger.debug(quests);
 
     //response message text
@@ -881,13 +1055,10 @@ async function commandList(client, interaction, ephemeral = true) {
     //response message
     interaction.reply({
       content: msg,
-      ephemeral: ephemeral === true,
+      ephemeral: ephemeral,
     });
   } catch (error) {
-    client.logger.error(
-      'Erreur lors de la commande ' + ephemeral === true ? 'list' : 'showlist',
-      error
-    );
+    client.logger.error('Erreur lors de la commande ' + 'list', error);
     client.logger.debug(error.message);
     client.logger.debug(error.stack);
   }
@@ -946,8 +1117,8 @@ async function commandComplete(client, interaction) {
     if (isPrivate) {
       //private -> reponse en privé
       interaction.reply({
-        content: `Quête ${_formatQuestId(id)} ${_formatQuestTitle(
-          undeletedQuest.title
+        content: `Quête ${_formatQuestId(quest.id)} ${_formatQuestTitle(
+          completedQuest.title
         )} terminée !`,
         ephemeral: true,
       });
@@ -1331,6 +1502,7 @@ async function commandSettingsList(client, interaction) {
 
 async function commandPlayerAdd(client, interaction) {
   const userId = interaction.user.id;
+  const channelId = interaction.channelId;
   const userName = client.users.cache.get(userId).username;
   const player = interaction.options.getUser('player') || false;
   const questId = interaction.options.getString('id') || false;
@@ -1340,7 +1512,9 @@ async function commandPlayerAdd(client, interaction) {
         player.userName
       )} à la quête ${questId} par ${helpers.formatUsername(userName)}`
     );
-    const quest = await api.addPlayerToQuest(questId, player.id);
+    const quest = await api.addPlayerToQuest(channelId, questId, player.id);
+    client.logger.debug(quest);
+
     interaction.reply({
       content: `Joueur ${helpers.formatUsername(
         player.username
@@ -1356,6 +1530,7 @@ async function commandPlayerAdd(client, interaction) {
 
 async function commandPlayerRemove(client, interaction) {
   const userId = interaction.user.id;
+  const channelId = interaction.channelId;
   const userName = client.users.cache.get(userId).username;
   const player = interaction.options.getUser('player') || false;
   const questId = interaction.options.getString('id') || false;
@@ -1365,7 +1540,12 @@ async function commandPlayerRemove(client, interaction) {
         player.userName
       )} de la quête ${questId} par ${helpers.formatUsername(userName)}`
     );
-    const quest = await api.removePlayerFromQuest(questId, player.id);
+    const quest = await api.removePlayerFromQuest(
+      channelId,
+      questId,
+      player.id
+    );
+    client.logger.debug(quest);
     interaction.reply({
       content: `Joueur ${helpers.formatUsername(
         player.username
@@ -1398,14 +1578,14 @@ module.exports = {
             return await commandAdd(client, interaction);
           case 'update':
             return await commandUpdate(client, interaction);
-          case 'info':
-            return await commandShow(client, interaction);
+          case 'preview':
+            return await commandShow(client, interaction, true);
           case 'show':
             return await commandShow(client, interaction, false);
           case 'list':
             return await commandList(client, interaction);
-          case 'showlist':
-            return await commandList(client, interaction, false);
+          //case 'showlist':
+          //  return await commandList(client, interaction, false);
           case 'complete':
             return await commandComplete(client, interaction);
           case 'uncomplete':
@@ -1427,8 +1607,6 @@ module.exports = {
             return await commandPlayerAdd(client, interaction);
           case 'remove':
             return await commandPlayerRemove(client, interaction);
-          case 'list':
-            return await commandPlayerList(client, interaction);
           default:
             interaction.reply({
               content: `Désolé mais, la commande ${commandgroup} ${subcommand} n'existe pas ou n'est pas encore implementée :(`,

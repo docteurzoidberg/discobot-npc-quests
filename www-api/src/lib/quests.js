@@ -162,6 +162,42 @@ async function _saveChannelDatabase(channelId, db) {
   }
 }
 
+async function addPlayerToQuest(channelId, questId, userId) {
+  _checkChannelId(channelId);
+  _checkQuestId(questId);
+  _checkUserId(userId);
+  const db = await _loadChannelDatabase(channelId);
+  _checkChannelDatabase(db);
+  const quest = db.quests.find(
+    (a) => a.id.toLowerCase() === questId.toLowerCase()
+  );
+  if (!quest) throw new Error(`Quest ${questId} not found`);
+  if (!quest.players) quest.players = [];
+  if (quest.players.includes(userId))
+    throw new Error(`User ${userId} already in quest ${questId}`);
+  quest.players.push(userId);
+  await _saveChannelDatabase(channelId, db);
+  return quest;
+}
+
+async function removePlayerFromQuest(channelId, questId, userId) {
+  _checkChannelId(channelId);
+  _checkQuestId(questId);
+  _checkUserId(userId);
+  const db = await _loadChannelDatabase(channelId);
+  _checkChannelDatabase(db);
+  const quest = db.quests.find(
+    (a) => a.id.toLowerCase() === questId.toLowerCase()
+  );
+  if (!quest) throw new Error(`Quest ${questId} not found`);
+  if (!quest.players) quest.players = [];
+  if (!quest.players.includes(userId))
+    throw new Error(`User ${userId} not in quest ${questId}`);
+  quest.players = quest.players.filter((a) => a !== userId);
+  await _saveChannelDatabase(channelId, db);
+  return quest;
+}
+
 async function getChannelQuestById(channelId, questId) {
   _checkChannelId(channelId);
   _checkQuestId(questId);
@@ -442,4 +478,6 @@ module.exports = {
   addTagToChannelQuest,
   removeTagFromChannelQuest,
   resetChannelDailyQuests,
+  addPlayerToQuest,
+  removePlayerFromQuest,
 };
