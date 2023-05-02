@@ -637,7 +637,7 @@ const _generateQuestEmbedShort = async (client, interaction, quest) => {
   if (quest.private) options.push('🔒 privée');
   if (quest.daily) options.push('📅 journalière');
   if (quest.repeat) options.push('🔁 répétable');
-  if (players.length > 1) options.push('👥 groupe');
+  //if (players.length > 1) options.push('👥 groupe');
 
   const createdByUser =
     quest.dateCreated && quest.createdBy ? quest.createdBy : false;
@@ -656,11 +656,11 @@ const _generateQuestEmbedShort = async (client, interaction, quest) => {
   const footerOptions = options.join(' ') + '\n';
 
   const descriptionPlayerEmoji = players.length > 1 ? '👥' : '👤';
-  const descriptionPlayers =
-    players.length > 1
-      ? await _getUserTags(client, players).join(', ')
-      : await _getUserTag(client, players[0]);
 
+  const userTags = await _getUserTags(client, players);
+  console.log('userTags', userTags);
+
+  const descriptionPlayers = userTags.join(', ');
   console.log('descriptionPlayers', descriptionPlayers);
 
   description = `${description}\n\n${descriptionPlayerEmoji} ${descriptionPlayers}`;
@@ -750,7 +750,7 @@ const _generateQuestEmbed = async (client, interaction, quest) => {
 
   const msgEmbed = new EmbedBuilder()
     .setTitle(`[${title}]`)
-    //.setDescription(description)
+    .setDescription(description)
     //.addField('Donne', give, true)
     //.addField('Points', points, true)
     //.addField('Joueurs', players.join(', '), true)
@@ -773,6 +773,7 @@ const _generateQuestEmbed = async (client, interaction, quest) => {
 */
   if (quest.dateCreated && createdByUser) {
     const userTag = await _getUserTag(client, createdByUser);
+    console.log('userTag', userTag);
     msgEmbed.addFields({
       name: 'Créée',
       value: `${helpers.formatEmbedFieldDate(quest.dateCreated)} ${userTag}`,
@@ -782,6 +783,7 @@ const _generateQuestEmbed = async (client, interaction, quest) => {
 
   if (quest.dateCompleted && completedByUser) {
     const userTag = await _getUserTag(client, completedByUser);
+    console.log('userTag', userTag);
     msgEmbed.addFields({
       name: 'Accomplie',
       value: `${helpers.formatEmbedFieldDate(quest.dateCompleted)} ${userTag}`,
@@ -1010,17 +1012,18 @@ async function commandShow(client, interaction, ephemeral = true) {
       ? ''
       : `${interaction.member} souhaite vous montrer cette quête:`;
     const embed = short
-      ? _generateQuestEmbedShort(client, interaction, quest)
-      : _generateQuestEmbed(client, interaction, quest);
-    interaction.reply({
+      ? await _generateQuestEmbedShort(client, interaction, quest)
+      : await _generateQuestEmbed(client, interaction, quest);
+    await interaction.reply({
       content: msg,
       embeds: [embed],
       ephemeral: ephemeral === true,
     });
   } catch (error) {
     client.logger.error(
-      'Erreur lors de la commande ' + ephemeral ? 'info' : 'show'
+      'Erreur lors de la commande ' + (ephemeral ? 'info' : 'show')
     );
+    console.log(error.rawError.errors.data.embeds[0]);
     client.logger.debug(error.message);
     client.logger.debug(error.stack);
   }
