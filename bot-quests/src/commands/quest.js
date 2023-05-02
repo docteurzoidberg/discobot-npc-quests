@@ -1153,7 +1153,9 @@ async function commandComplete(client, interaction) {
       //public -> reponse dans le channel ou a été lancé la commande
       interaction.reply({
         content: `${interaction.member} a terminé une quête !`,
-        embeds: [_generateQuestEmbedShort(client, interaction, completedQuest)],
+        embeds: [
+          await _generateQuestEmbedShort(client, interaction, completedQuest),
+        ],
       });
     }
   } catch (error) {
