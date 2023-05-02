@@ -565,19 +565,32 @@ const _formatAutocompleteUser = (user) => {
 const amap = async (arr, fun) =>
   await Promise.all(arr.map(async (v) => await fun(v)));
 
-const _getUserName = async (client, userNameOrId) => {
+const _getUserName = async (client, interaction, userNameOrId) => {
   const unknown = 'Utilisateur inconnu';
   if (!userNameOrId) {
     return unknown;
   }
   if (userNameOrId.match(/^[0-9]+$/)) {
     try {
-      const user = client.users.cache.get(userNameOrId);
-      if (!user) {
-        client.logger.error('user not in cache: ' + userNameOrId);
+      const guild = await client.guilds.fetch(interaction.guildId);
+      const member = await guild.members.fetch(userNameOrId);
+      if (!member) {
+        client.logger.error('user not in guild: ' + userNameOrId);
         return unknown;
       }
-      return user.username;
+      return member.nickname || member.user.username;
+      //const user = client.users.cache.get(userNameOrId);
+      //if (!user) {
+      //  client.logger.error('user not in cache: ' + userNameOrId);
+      //  const guild = await client.guilds.fetch(interaction.guildId);
+      //  const member = await guild.members.fetch(userid);
+      //  if (!member) {
+      //    client.logger.error('user not in guild: ' + userNameOrId);
+      //    return unknown;
+      //  }
+      //  return member.username;
+      // }
+      //return user.username;
     } catch (error) {
       return unknown;
     }
@@ -585,19 +598,26 @@ const _getUserName = async (client, userNameOrId) => {
   return userNameOrId;
 };
 
-const _getUserTag = async (client, userNameOrId) => {
+const _getUserTag = async (client, interaction, userNameOrId) => {
   const unknown = 'Utilisateur inconnu';
   if (!userNameOrId) {
     return unknown;
   }
   if (userNameOrId.match(/^[0-9]+$/)) {
     try {
-      const user = client.users.cache.get(userNameOrId);
-      if (!user) {
-        client.logger.error('user not in cache: ' + userNameOrId);
+      const guild = await client.guilds.fetch(interaction.guildId);
+      const member = await guild.members.fetch(userNameOrId);
+      if (!member) {
+        client.logger.error('user not in guild: ' + userNameOrId);
         return unknown;
       }
-      return `<@${user.id}>`;
+      return `<@${member.id}>`;
+      //const user = client.users.cache.get(userNameOrId);
+      //if (!user) {
+      //  client.logger.error('user not in cache: ' + userNameOrId);
+      //  return unknown;
+      //}
+      //return `<@${user.id}>`;
     } catch (error) {
       return unknown;
     }
@@ -605,17 +625,17 @@ const _getUserTag = async (client, userNameOrId) => {
   return userNameOrId;
 };
 
-const _getUserNames = async (client, usersOrIds = []) => {
+const _getUserNames = async (client, interaction, usersOrIds = []) => {
   const usernames = await amap(usersOrIds, async (userNameOrId) => {
-    const userName = await _getUserName(client, userNameOrId);
+    const userName = await _getUserName(client, interaction, userNameOrId);
     return userName;
   });
   return usernames;
 };
 
-const _getUserTags = async (client, usersOrIds = []) => {
+const _getUserTags = async (client, interaction, usersOrIds = []) => {
   const userTags = await amap(usersOrIds, async (userNameOrId) => {
-    const userTag = await _getUserTag(client, userNameOrId);
+    const userTag = await _getUserTag(client, interaction, userNameOrId);
     return userTag;
   });
   return userTags;
@@ -646,8 +666,8 @@ const _generateQuestEmbedShort = async (client, interaction, quest) => {
 
   const color = quest.dateCompleted ? 0x00ff00 : helpers.colorFromId(quest.id);
   const footerUser = completedByUser
-    ? await _getUserName(client, completedByUser)
-    : await _getUserName(client, createdByUser);
+    ? await _getUserName(client, interaction, completedByUser)
+    : await _getUserName(client, interaction, createdByUser);
 
   console.log('footerUser', footerUser);
 
@@ -657,7 +677,7 @@ const _generateQuestEmbedShort = async (client, interaction, quest) => {
 
   const descriptionPlayerEmoji = players.length > 1 ? '👥' : '👤';
 
-  const userTags = await _getUserTags(client, players);
+  const userTags = await _getUserTags(client, interaction, players);
   console.log('userTags', userTags);
 
   const descriptionPlayers = userTags.join(', ');
@@ -709,7 +729,7 @@ const _generateQuestEmbed = async (client, interaction, quest) => {
   let image = quest.image || '';
   let icon = quest.icon || '';
   let give = quest.give || '';
-  let players = await _getUserTags(client, quest.players || []);
+  let players = await _getUserTags(client, interaction, quest.players || []);
 
   const color = quest.dateCompleted ? 0x00ff00 : helpers.colorFromId(quest.id);
 
@@ -731,8 +751,8 @@ const _generateQuestEmbed = async (client, interaction, quest) => {
   //TODO: utiliser createdBy / completedBy
   const footerUser =
     quest.dateCompleted && completedByUser
-      ? await _getUserName(client, completedByUser)
-      : await _getUserName(client, createdByUser);
+      ? await _getUserName(client, interaction, completedByUser)
+      : await _getUserName(client, interaction, createdByUser);
 
   const footerStatus =
     quest.dateCompleted && completedByUser
@@ -772,7 +792,7 @@ const _generateQuestEmbed = async (client, interaction, quest) => {
   }
 */
   if (quest.dateCreated && createdByUser) {
-    const userTag = await _getUserTag(client, createdByUser);
+    const userTag = await _getUserTag(client, interaction, createdByUser);
     console.log('userTag', userTag);
     msgEmbed.addFields({
       name: 'Créée',
@@ -782,7 +802,7 @@ const _generateQuestEmbed = async (client, interaction, quest) => {
   }
 
   if (quest.dateCompleted && completedByUser) {
-    const userTag = await _getUserTag(client, completedByUser);
+    const userTag = await _getUserTag(client, interaction, completedByUser);
     console.log('userTag', userTag);
     msgEmbed.addFields({
       name: 'Accomplie',
@@ -1023,7 +1043,6 @@ async function commandShow(client, interaction, ephemeral = true) {
     client.logger.error(
       'Erreur lors de la commande ' + (ephemeral ? 'info' : 'show')
     );
-    console.log(error.rawError.errors.data.embeds[0]);
     client.logger.debug(error.message);
     client.logger.debug(error.stack);
   }
