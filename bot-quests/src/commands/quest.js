@@ -561,7 +561,7 @@ const _formatAutocompleteUser = (user) => {
   };
 };
 
-const _getUserName = async (client, userNameOrId) => {
+const _getUserName = (client, userNameOrId) => {
   const unknown = 'Utilisateur inconnu';
   if (!userNameOrId) {
     return unknown;
@@ -569,10 +569,6 @@ const _getUserName = async (client, userNameOrId) => {
   if (userNameOrId.match(/^[0-9]+$/)) {
     try {
       const user = client.users.cache.get(userNameOrId);
-      if (!user) {
-        const fetchedUser = await client.users.fetch(userNameOrId);
-        return fetchedUser.username;
-      }
       return user.username;
     } catch (error) {
       return unknown;
@@ -589,10 +585,6 @@ const _getUserTag = async (client, userNameOrId) => {
   if (userNameOrId.match(/^[0-9]+$/)) {
     try {
       const user = client.users.cache.get(userNameOrId);
-      if (!user) {
-        const userFetch = await client.users.fetch(userNameOrId);
-        return `<@${userFetch.id}>`;
-      }
       return `<@${user.id}>`;
     } catch (error) {
       return unknown;
@@ -609,6 +601,7 @@ const _getUserNames = (client, usersOrIds) => {
 };
 
 const _getUserTags = (client, usersOrIds) => {
+  //map promise await
   const users = usersOrIds.map(async (userNameOrId) => {
     return await _getUserTag(client, userNameOrId);
   });
@@ -633,14 +626,18 @@ const _generateQuestEmbedShort = async (client, interaction, quest) => {
   if (quest.repeat) options.push('🔁 répétable');
   if (players.length > 1) options.push('👥 groupe');
 
-  const createdByUser = quest.createdBy || false;
-  const completedByUser = quest.completedBy || false;
+  const createdByUser =
+    quest.dateCreated && quest.createdBy ? quest.createdBy : false;
+  const completedByUser =
+    quest.dateCompleted && quest.completedBy ? quest.completedBy : false;
 
   const color = quest.dateCompleted ? 0x00ff00 : helpers.colorFromId(quest.id);
-  const footerUser =
-    quest.dateCompleted && completedByUser
-      ? await _getUserName(client, completedByUser)
-      : await _getUserName(client, createdByUser);
+  const footerUser = completedByUser
+    ? await _getUserName(client, completedByUser)
+    : await _getUserName(client, createdByUser);
+
+  console.log('footerUser', footerUser);
+
   const footerStatus =
     quest.dateCompleted && completedByUser ? '✅ accompli par' : '⭐ créée par';
   const footerOptions = options.join(' ') + '\n';
@@ -648,8 +645,10 @@ const _generateQuestEmbedShort = async (client, interaction, quest) => {
   const descriptionPlayerEmoji = players.length > 1 ? '👥' : '👤';
   const descriptionPlayers =
     players.length > 1
-      ? _getUserTags(client, players).join(', ')
-      : _getUserTag(client, players[0]);
+      ? await _getUserTags(client, players).join(', ')
+      : await _getUserTag(client, players[0]);
+
+  console.log('descriptionPlayers', descriptionPlayers);
 
   description = `${description}\n\n${descriptionPlayerEmoji} ${descriptionPlayers}`;
   const footerPlayers = '';
@@ -1134,7 +1133,7 @@ async function commandComplete(client, interaction) {
       //public -> reponse dans le channel ou a été lancé la commande
       interaction.reply({
         content: `${interaction.member} a terminé une quête !`,
-        embeds: [_formatQuestEmbed(completedQuest, true)],
+        embeds: [_generateQuestEmbed(completedQuest, true)],
       });
     }
   } catch (error) {
