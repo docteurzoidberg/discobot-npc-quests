@@ -1,6 +1,7 @@
 require('dotenv').config({ path: __dirname + '/../.env' });
 
 const dalle = require('./lib/openai-dall-e');
+const tppt = require('./lib/tppt-api');
 
 const avatarUrl =
   'https://cdn.discordapp.com/avatars/169141120339673088/c7b1c0635e581bb6d4ed30fb3176071b.webp?size=80';
@@ -13,6 +14,8 @@ const prompt = `imagine un personnage de jeu rpg en style pixel-art vue top-down
   try {
     const text = await dalle.getDallEImage(prompt);
     console.log(text);
+    const tppturl = await tppt.dalle2tppt(text);
+    console.log(tppturl);
   } catch (e) {
     // Deal with the fact the chain failed
     console.error(e);

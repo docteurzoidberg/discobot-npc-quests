@@ -3,6 +3,7 @@ const { EmbedBuilder } = require('discord.js');
 
 const api = require('../lib/quests-api');
 const dalle = require('../lib/openai-dall-e');
+const tppt = require('../lib/tppt-api');
 const helpers = require('../lib/discobot-helpers');
 
 //emojis
@@ -561,7 +562,10 @@ const _formatAutocompleteUser = (user) => {
   };
 };
 
-const _getUserName = (client, userNameOrId) => {
+const amap = async (arr, fun) =>
+  await Promise.all(arr.map(async (v) => await fun(v)));
+
+const _getUserName = async (client, userNameOrId) => {
   const unknown = 'Utilisateur inconnu';
   if (!userNameOrId) {
     return unknown;
@@ -569,6 +573,10 @@ const _getUserName = (client, userNameOrId) => {
   if (userNameOrId.match(/^[0-9]+$/)) {
     try {
       const user = client.users.cache.get(userNameOrId);
+      if (!user) {
+        client.logger.error('user not in cache: ' + userNameOrId);
+        return unknown;
+      }
       return user.username;
     } catch (error) {
       return unknown;
@@ -585,6 +593,10 @@ const _getUserTag = async (client, userNameOrId) => {
   if (userNameOrId.match(/^[0-9]+$/)) {
     try {
       const user = client.users.cache.get(userNameOrId);
+      if (!user) {
+        client.logger.error('user not in cache: ' + userNameOrId);
+        return unknown;
+      }
       return `<@${user.id}>`;
     } catch (error) {
       return unknown;
@@ -593,19 +605,20 @@ const _getUserTag = async (client, userNameOrId) => {
   return userNameOrId;
 };
 
-const _getUserNames = (client, usersOrIds) => {
-  const users = usersOrIds.map(async (userNameOrId) => {
-    return await _getUserName(client, userNameOrId);
+const _getUserNames = async (client, usersOrIds = []) => {
+  const usernames = await amap(usersOrIds, async (userNameOrId) => {
+    const userName = await _getUserName(client, userNameOrId);
+    return userName;
   });
-  return users;
+  return usernames;
 };
 
-const _getUserTags = (client, usersOrIds) => {
-  //map promise await
-  const users = usersOrIds.map(async (userNameOrId) => {
-    return await _getUserTag(client, userNameOrId);
+const _getUserTags = async (client, usersOrIds = []) => {
+  const userTags = await amap(usersOrIds, async (userNameOrId) => {
+    const userTag = await _getUserTag(client, userNameOrId);
+    return userTag;
   });
-  return users;
+  return userTags;
 };
 
 const _generateDallePrompt = (title) => {
@@ -677,10 +690,11 @@ const _generateQuestEmbedShort = async (client, interaction, quest) => {
   } else if (image !== '') {
     msgEmbed.setThumbnail(image);
   }
+  client.logger.debug(msgEmbed);
   return msgEmbed;
 };
 
-const _generateQuestEmbed = (client, interaction, quest) => {
+const _generateQuestEmbed = async (client, interaction, quest) => {
   const emojiDaily = '📅';
   const emojiRepeat = '🔁';
   const emojiCompleted = '✅';
@@ -695,7 +709,7 @@ const _generateQuestEmbed = (client, interaction, quest) => {
   let image = quest.image || '';
   let icon = quest.icon || '';
   let give = quest.give || '';
-  let players = _getUserTags(client, quest.players || []);
+  let players = await _getUserTags(client, quest.players || []);
 
   const color = quest.dateCompleted ? 0x00ff00 : helpers.colorFromId(quest.id);
 
@@ -717,8 +731,8 @@ const _generateQuestEmbed = (client, interaction, quest) => {
   //TODO: utiliser createdBy / completedBy
   const footerUser =
     quest.dateCompleted && completedByUser
-      ? _getUserName(client, completedByUser)
-      : _getUserName(client, createdByUser);
+      ? await _getUserName(client, completedByUser)
+      : await _getUserName(client, createdByUser);
 
   const footerStatus =
     quest.dateCompleted && completedByUser
@@ -758,22 +772,19 @@ const _generateQuestEmbed = (client, interaction, quest) => {
   }
 */
   if (quest.dateCreated && createdByUser) {
+    const userTag = await _getUserTag(client, createdByUser);
     msgEmbed.addFields({
       name: 'Créée',
-      value: `${helpers.formatEmbedFieldDate(quest.dateCreated)} ${_getUserTag(
-        client,
-        createdByUser
-      )}`,
+      value: `${helpers.formatEmbedFieldDate(quest.dateCreated)} ${userTag}`,
       inline: false,
     });
   }
 
   if (quest.dateCompleted && completedByUser) {
+    const userTag = await _getUserTag(client, completedByUser);
     msgEmbed.addFields({
       name: 'Accomplie',
-      value: `${helpers.formatEmbedFieldDate(
-        quest.dateCompleted
-      )} ${_getUserTag(client, completedByUser)}`,
+      value: `${helpers.formatEmbedFieldDate(quest.dateCompleted)} ${userTag}`,
       inline: false,
     });
   }
@@ -812,7 +823,7 @@ const _generateQuestEmbed = (client, interaction, quest) => {
   }
 
   msgEmbed.setDescription(descriptionMsg);
-
+  client.logger.debug(msgEmbed);
   return msgEmbed;
 };
 
@@ -841,11 +852,17 @@ async function commandAdd(client, interaction) {
     interaction.deferReply({ ephemeral: true });
 
     const dalleImage = await dalle.getDallEImage(prompt);
+    client.logger.debug(dalleImage);
+
+    //uploads to tppt
+    const tpptUrl = await tppt.dalle2tppt(dalleImage);
+    client.logger.debug(tpptUrl);
+
     if (image === '') {
-      image = dalleImage;
+      image = tpptUrl;
     }
     if (icon === '') {
-      icon = dalleImage;
+      icon = tpptUrl;
     }
   }
 
