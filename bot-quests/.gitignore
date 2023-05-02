@@ -3,3 +3,5 @@ db/sqlite.db
 data
 .env
 .env.*
+out/
+tsconfig.tsbuildinfo
