@@ -43,7 +43,7 @@ const dalle2tppt = async (
   };
   const buffer = await _downloadToMemory(dalleurl);
   const response = await _uploadToTppt(buffer, headers);
-  return response.resource || '';
+  return response.resource + '/direct.png' || '';
 };
 
 module.exports = {
