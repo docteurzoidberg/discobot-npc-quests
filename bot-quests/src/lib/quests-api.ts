@@ -4,7 +4,7 @@ const API_URL = process.env.API_URL || false;
 
 const fetch = require('node-fetch');
 
-async function resetDailyQuestsInChannel(channelId) {
+export async function resetDailyQuestsInChannel(channelId) {
   const response = await fetch(`${API_URL}/quests/${channelId}/reset`, {
     method: 'POST',
   });
@@ -15,7 +15,7 @@ async function resetDailyQuestsInChannel(channelId) {
   }
 }
 
-async function getChannelsWithQuests() {
+export async function getChannelsWithQuests() {
   const response = await fetch(`${API_URL}/channels`);
   if (response.ok) {
     return await response.json();
@@ -24,7 +24,7 @@ async function getChannelsWithQuests() {
   }
 }
 
-async function getUserSettings(userId) {
+export async function getUserSettings(userId) {
   const response = await fetch(`${API_URL}/users/${userId}/settings`);
   if (response.ok) {
     return await response.json();
@@ -34,7 +34,7 @@ async function getUserSettings(userId) {
 }
 
 //put user settings
-async function setUserSettings(userId, settings) {
+export async function setUserSettings(userId, settings) {
   const response = await fetch(`${API_URL}/users/${userId}/settings`, {
     method: 'PUT',
     headers: {
@@ -50,7 +50,7 @@ async function setUserSettings(userId, settings) {
 }
 
 //TODO: write wrapper for all quest api methods
-async function getChannelQuests(channelId) {
+export async function getChannelQuests(channelId) {
   const response = await fetch(`${API_URL}/quests/${channelId}`);
   if (response.ok) {
     return await response.json();
@@ -59,7 +59,7 @@ async function getChannelQuests(channelId) {
   }
 }
 
-async function getChannelQuestById(channelId, questId) {
+export async function getChannelQuestById(channelId, questId) {
   const response = await fetch(`${API_URL}/quests/${channelId}/${questId}`);
   if (response.ok) {
     return await response.json();
@@ -68,7 +68,7 @@ async function getChannelQuestById(channelId, questId) {
   }
 }
 
-async function createChannelQuest(channelId, quest) {
+export async function createChannelQuest(channelId, quest) {
   const response = await fetch(`${API_URL}/quests/${channelId}`, {
     method: 'POST',
     headers: {
@@ -83,7 +83,7 @@ async function createChannelQuest(channelId, quest) {
   }
 }
 
-async function updateChannelQuest(channelId, questId, quest) {
+export async function updateChannelQuest(channelId, questId, quest) {
   const response = await fetch(`${API_URL}/quests/${channelId}/${questId}`, {
     method: 'PUT',
     headers: {
@@ -98,7 +98,7 @@ async function updateChannelQuest(channelId, questId, quest) {
   }
 }
 
-async function completeChannelQuest(channelId, questId, userId) {
+export async function completeChannelQuest(channelId, questId, userId) {
   const response = await fetch(
     `${API_URL}/quests/${channelId}/${questId}/complete/${userId}`,
     {
@@ -115,7 +115,7 @@ async function completeChannelQuest(channelId, questId, userId) {
   }
 }
 
-async function uncompleteChannelQuest(channelId, questId) {
+export async function uncompleteChannelQuest(channelId, questId) {
   const response = await fetch(
     `${API_URL}/quests/${channelId}/${questId}/uncomplete`,
     {
@@ -132,7 +132,7 @@ async function uncompleteChannelQuest(channelId, questId) {
   }
 }
 
-async function undeleteChannelQuest(channelId, questId) {
+export async function undeleteChannelQuest(channelId, questId) {
   const response = await fetch(
     `${API_URL}/quests/${channelId}/${questId}/undelete`,
     {
@@ -149,7 +149,7 @@ async function undeleteChannelQuest(channelId, questId) {
   }
 }
 
-async function deleteChannelQuest(channelId, questId) {
+export async function deleteChannelQuest(channelId, questId) {
   const response = await fetch(`${API_URL}/quests/${channelId}/${questId}`, {
     method: 'DELETE',
   });
@@ -160,7 +160,7 @@ async function deleteChannelQuest(channelId, questId) {
   }
 }
 
-async function addPlayerToQuest(channelId, questId, userId) {
+export async function addPlayerToQuest(channelId, questId, userId) {
   const response = await fetch(
     `${API_URL}/quests/${channelId}/${questId}/addplayer/${userId}`,
     {
@@ -174,7 +174,7 @@ async function addPlayerToQuest(channelId, questId, userId) {
   }
 }
 
-async function removePlayerFromQuest(channelId, questId, userId) {
+export async function removePlayerFromQuest(channelId, questId, userId) {
   const response = await fetch(
     `${API_URL}/quests/${channelId}/${questId}/removeplayer/${userId}`,
     {
@@ -187,20 +187,3 @@ async function removePlayerFromQuest(channelId, questId, userId) {
     throw new Error(`API error: ${response.status} ${response.statusText}`);
   }
 }
-
-module.exports = {
-  getChannelsWithQuests,
-  getUserSettings,
-  setUserSettings,
-  getChannelQuests,
-  getChannelQuestById,
-  createChannelQuest,
-  updateChannelQuest,
-  completeChannelQuest,
-  uncompleteChannelQuest,
-  deleteChannelQuest,
-  undeleteChannelQuest,
-  resetDailyQuestsInChannel,
-  addPlayerToQuest,
-  removePlayerFromQuest,
-};

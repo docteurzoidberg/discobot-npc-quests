@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:18-alpine3.16
 
 # Packages
 RUN apk add dumb-init

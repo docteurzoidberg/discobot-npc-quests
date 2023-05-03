@@ -1,3 +1,5 @@
+import { CommandModule } from './types/CommandModule';
+
 require('dotenv').config({
   path:
     __dirname +
@@ -11,7 +13,7 @@ const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v9');
 
 const commandsDir = __dirname + '/commands';
-const commands = [];
+const commands: Array<CommandModule> = [];
 const commandFiles = fs
   .readdirSync(commandsDir)
   .filter((file) => file.endsWith('.js'));
@@ -53,3 +55,5 @@ const rest = new REST({ version: '9' }).setToken(BOT_TOKEN);
     logger.fatal(error);
   }
 })();
+
+export {};

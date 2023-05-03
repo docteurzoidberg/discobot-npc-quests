@@ -4,14 +4,16 @@
   "description": "Discord bot to track channels quests",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon src/index.js --no-warning | pino-pretty",
-    "start": "node src/index.js --no-warning | pino-pretty",
-    "register": "node src/register.js --no-warning | pino-pretty",
-    "resetdaily": "node src/resetdaily.js --no-warning | pino-pretty",
-    "testdalle": "node src/testdalle.js"
+    "tsc": "tsc",
+    "dev": "ts-node-dev --respawn —-pretty —-transpile-only index.ts | pino-pretty",
+    "start": "node ./dist/index.js | pino-pretty",
+    "build": "tsc -p .",
+    "register": "node ./dist/register.js | pino-pretty",
+    "resetdaily": "node ./dist/resetdaily.js | pino-pretty",
+    "testdalle": "node ./dist/testdalle.js"
   },
   "author": "DrZoid",
-  "license": "MIT",
+  "license": "DBAD",
   "dependencies": {
     "@discordjs/rest": "^1.6.0",
     "discord-api-types": "^0.37.37",
@@ -24,12 +26,15 @@
     "uuid": "^9.0.0"
   },
   "devDependencies": {
+    "typescript": "^5.0.4",
+    "@types/node": "^18.16.3",
+    "@typescript-eslint/parser": "^5.59.2",
     "eslint": "^8.37.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-plugin-import": "^2.27.5",
-    "nodemon": "^2.0.12",
     "pino-pretty": "^6.0.0",
     "prettier": "^2.8.7",
-    "typescript": "^5.0.4"
+    "ts-node": "^10.9.1",
+    "ts-node-dev": "^2.0.0"
   }
 }

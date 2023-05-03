@@ -1,18 +1,20 @@
-require('dotenv').config({
+import * as dotenv from 'dotenv';
+
+dotenv.config({
   path:
     __dirname + '/../../.env' + (process.env.NODE_ENV || '' !== '')
       ? '.' + process.env.NODE_ENV
       : '',
 });
 
-const { Configuration, OpenAIApi } = require('openai');
+import { Configuration, OpenAIApi } from 'openai';
 
 const configuration = new Configuration({
   apiKey: process.env.OPENAI_API_KEY,
 });
 const openai = new OpenAIApi(configuration);
 
-async function getDallEImage(prompt, avatarUrl = '') {
+export async function getDallEImage(prompt, avatarUrl: string = '') {
   //TODO: handle avatar when api permits
 
   // Generate image from prompt
@@ -23,7 +25,3 @@ async function getDallEImage(prompt, avatarUrl = '') {
   });
   return response.data.data[0].url;
 }
-
-module.exports = {
-  getDallEImage,
-};

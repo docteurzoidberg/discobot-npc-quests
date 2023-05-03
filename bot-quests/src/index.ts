@@ -1,3 +1,6 @@
+//TODO: typescript imports
+
+//load environment variables
 require('dotenv').config({
   path:
     __dirname +
@@ -10,7 +13,7 @@ const basePath = __dirname;
 
 const logger = require('pino')({ level: process.env.LOG_LEVEL || 'debug' });
 
-const { Client, Collection, GatewayIntentBits } = require('discord.js');
+import { Client, Collection, GatewayIntentBits, Partials } from 'discord.js';
 
 //parsing env variables
 const BOT_INVISIBLE = process.env.BOT_INVISIBLE === 'true';
@@ -61,8 +64,8 @@ try {
 }
 
 //check if bot was updated
-let updated = false;
-let botVersion = false;
+let updated: boolean | undefined = undefined;
+let botVersion: string | undefined = undefined;
 const botVersionFile = `${DATA_PATH}/.version`;
 
 //check version file if exists
@@ -95,25 +98,27 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildMessageReactions,
   ],
-  partials: ['MESSAGE', 'CHANNEL', 'REACTION'],
+  partials: [Partials.Channel, Partials.Message, Partials.Reaction],
   presence: {
     status: BOT_INVISIBLE ? 'invisible' : 'online',
   },
 });
 
-//populate client with commands, events and everything needed by modules
-client.logger = logger;
-client.commands = new Collection();
-client.updated = updated;
-client.invisible = BOT_INVISIBLE === 'true';
-client.version = BOT_VERSION;
-client.dataPath = DATA_PATH;
-client.config = {
-  USE_DALLE: USE_DALLE,
-  INVISIBLE: BOT_INVISIBLE,
-  ANNOUNCE_CHANNEL: process.env.ANNOUNCE_CHANNEL || false,
-  ANNOUNCE_UPDATES: process.env.ANNOUNCE_UPDATES === 'true',
-  ANNOUNCE_READY: process.env.ANNOUNCE_READY === 'true',
+const app = {
+  client: client,
+  logger: logger,
+  commands: new Collection(),
+  updated: updated,
+  invisible: BOT_INVISIBLE,
+  version: BOT_VERSION,
+  dataPath: DATA_PATH,
+  config: {
+    USE_DALLE: USE_DALLE,
+    INVISIBLE: BOT_INVISIBLE,
+    ANNOUNCE_CHANNEL: process.env.ANNOUNCE_CHANNEL || false,
+    ANNOUNCE_UPDATES: process.env.ANNOUNCE_UPDATES === 'true',
+    ANNOUNCE_READY: process.env.ANNOUNCE_READY === 'true',
+  },
 };
 
 //load event modules
@@ -123,9 +128,9 @@ const eventFiles = fs
 for (const file of eventFiles) {
   const event = require(`${basePath}/events/${file}`);
   if (event.once) {
-    client.once(event.name, (...args) => event.execute(client, ...args));
+    client.once(event.name, (...args) => event.execute(app, ...args));
   } else {
-    client.on(event.name, (...args) => event.execute(client, ...args));
+    client.on(event.name, (...args) => event.execute(app, ...args));
   }
 }
 
@@ -137,7 +142,7 @@ for (const file of commandFiles) {
   const command = require(`${basePath}/commands/${file}`);
   // Set a new item in the Collection
   // With the key as the command name and the value as the exported module
-  client.commands.set(command.data.name, command);
+  app.commands.set(command.data.name, command);
 }
 
 //handle process signals
@@ -151,3 +156,4 @@ process.on('SIGTERM', closeGracefully);
 
 //start discord's bot
 client.login(BOT_TOKEN);
+export {};

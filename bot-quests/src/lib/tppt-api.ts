@@ -1,11 +1,13 @@
-require('dotenv').config({
+import * as dotenv from 'dotenv';
+
+dotenv.config({
   path:
-    `${__dirname}/../../.env.dev` +
+    `${__dirname}/../../.env` +
     (process.env.NODE_ENV ? `.${process.env.NODE_ENV}` : ''),
 });
 
-const fetch = require('node-fetch');
-const FormData = require('form-data');
+import fetch = require('node-fetch');
+import FormData = require('form-data');
 
 const TPPT_TOKEN = process.env.TPPT_TOKEN || '';
 const TPPT_URL = process.env.TPPT_URL || '';
@@ -30,7 +32,7 @@ const _uploadToTppt = async (buffer, headers) => {
 };
 
 //download image from dalle then uploads it to tppt.eu and return url
-const dalle2tppt = async (
+export const dalle2tppt = async (
   dalleurl,
   author = 'npc-quests',
   color = '#73375e'
@@ -44,8 +46,4 @@ const dalle2tppt = async (
   const buffer = await _downloadToMemory(dalleurl);
   const response = await _uploadToTppt(buffer, headers);
   return response.resource + '/direct.png' || '';
-};
-
-module.exports = {
-  dalle2tppt,
 };

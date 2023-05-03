@@ -1,4 +1,13 @@
-FROM node:18-alpine
+FROM node:18-alpine3.16 AS builder
+WORKDIR /app
+COPY . .
+RUN npm install \
+&& npm install typescript -g \
+&& npm run build \
+&& rm -rf node_modules
+
+
+FROM node:18-alpine3.16 as botrunner
 
 ENV NODE_ENV production
 ENV LANG C.UTF-8
@@ -11,16 +20,14 @@ RUN mkdir /data
 WORKDIR /app
 
 # NODE_MODULES
-COPY package*.json ./
-RUN npm install --production
-RUN npm install -g pino-pretty
+COPY --from=builder ./app/dist ./dist
+COPY package* ./
 
-# APP
-COPY . .
-
-# REGISTER bot commands
-RUN npm run register
+#prod node modules + run register commands
+RUN npm install --omit=dev \
+&& npm install -g pino-pretty \
+npm run register
 
 # RUN
-CMD ["dumb-init", "npm", "run", "start"]
+CMD ["dumb-init", "npm", "start"]
 

@@ -1,8 +1,11 @@
+//internal helper function to shift char code
+const _shiftCharCode = (Δ) => (c) => String.fromCharCode(c.charCodeAt(0) + Δ);
+
 //choose color based on id on a colorwheel designed so that two consecutive ids have a color that is visually very distinct
 //use 256 color, web based
 //id is a string with alpha characters only from 2 chars or more
-const colorFromId = (id) => {
-  const colorwheel = [];
+export const colorFromId = (id: string): string => {
+  const colorwheel: Array<string> = [];
   //generate colorwheel
   for (let i = 0; i < 256; i++) {
     colorwheel.push(`#${i.toString(16).padStart(2, '0')}0000`);
@@ -23,29 +26,26 @@ const colorFromId = (id) => {
 };
 
 //add <> to urls to prevent discord from embedding them
-const preventEmbed = (url) => {
+export const preventEmbed = (url: string): string => {
   if (!url || url === '') return '';
   return url.replace(/(https?:\/\/[^\s]+)/g, '<$1>');
 };
 
-//helper function to shift char code
-const _shiftCharCode = (Δ) => (c) => String.fromCharCode(c.charCodeAt(0) + Δ);
-
 //convert string to full width characters
-const toFullWidthString = (str) =>
+export const toFullWidthString = (str: string): string =>
   str.replace(/[!-~]/g, _shiftCharCode(0xfee0));
 
 //convert string to half width characters
-const toHalfWidthString = (str) =>
+export const toHalfWidthString = (str: string): string =>
   str.replace(/[！-～]/g, _shiftCharCode(-0xfee0));
 
 //check if string is full width
-const isFullWidthString = (str) => {
+export const isFullWidthString = (str: string): boolean => {
   return str.split('').some((c) => c.charCodeAt(0) > 0xff00);
 };
 
 //parse date string or date object to date object, if not possible return current date
-const parseDate = (date) => {
+export const parseDate = (date: any): Date => {
   if (typeof date === 'string') {
     date = new Date(date);
   }
@@ -56,36 +56,27 @@ const parseDate = (date) => {
 };
 
 // 2022-12-28
-const formatDateShort = (date) => {
-  const d = new Date(date);
+export const formatDateShort = (date: any): string => {
+  if (typeof date === 'string') {
+    date = new Date(date);
+  } else if (!(date instanceof Date)) {
+    date = new Date();
+  }
   // adds 0 if month or day is < 10
   const addZero = (n) => (n < 10 ? `0${n}` : n);
-  return `${d.getFullYear()}-${addZero(d.getMonth() + 1)}-${addZero(
-    d.getDate()
+  return `${date.getFullYear()}-${addZero(date.getMonth() + 1)}-${addZero(
+    date.getDate()
   )}`;
 };
 
-const formatEmbedFieldDate = (date) => {
+export const formatEmbedFieldDate = (date): string => {
   return `📅 ${formatDateShort(parseDate(date))}`;
 };
 
-const formatChannelName = (name) => {
+export const formatChannelName = (name: string): string => {
   return `#${name}`;
 };
 
-const formatUsername = (name) => {
+export const formatUsername = (name: string): string => {
   return `@${name}`;
-};
-
-module.exports = {
-  colorFromId,
-  preventEmbed,
-  toFullWidthString,
-  toHalfWidthString,
-  isFullWidthString,
-  parseDate,
-  formatDateShort,
-  formatEmbedFieldDate,
-  formatChannelName,
-  formatUsername,
 };

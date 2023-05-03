@@ -6,6 +6,10 @@ const dalle = require('../lib/openai-dall-e');
 const tppt = require('../lib/tppt-api');
 const helpers = require('../lib/discobot-helpers');
 
+const getTime = (date): number => {
+  return date ? new Date(date).getTime() : 0;
+};
+
 //emojis
 
 //calendar emoji
@@ -565,27 +569,27 @@ const _formatAutocompleteUser = (user) => {
 const amap = async (arr, fun) =>
   await Promise.all(arr.map(async (v) => await fun(v)));
 
-const _getUserName = async (client, interaction, userNameOrId) => {
+const _getUserName = async (app, interaction, userNameOrId) => {
   const unknown = 'Utilisateur inconnu';
   if (!userNameOrId) {
     return unknown;
   }
   if (userNameOrId.match(/^[0-9]+$/)) {
     try {
-      const guild = await client.guilds.fetch(interaction.guildId);
+      const guild = await app.client.guilds.fetch(interaction.guildId);
       const member = await guild.members.fetch(userNameOrId);
       if (!member) {
-        client.logger.error('user not in guild: ' + userNameOrId);
+        app.logger.error('user not in guild: ' + userNameOrId);
         return unknown;
       }
       return member.nickname || member.user.username;
-      //const user = client.users.cache.get(userNameOrId);
+      //const user = app.client.users.cache.get(userNameOrId);
       //if (!user) {
-      //  client.logger.error('user not in cache: ' + userNameOrId);
-      //  const guild = await client.guilds.fetch(interaction.guildId);
+      //  app.logger.error('user not in cache: ' + userNameOrId);
+      //  const guild = await app.client.guilds.fetch(interaction.guildId);
       //  const member = await guild.members.fetch(userid);
       //  if (!member) {
-      //    client.logger.error('user not in guild: ' + userNameOrId);
+      //    app.logger.error('user not in guild: ' + userNameOrId);
       //    return unknown;
       //  }
       //  return member.username;
@@ -598,23 +602,23 @@ const _getUserName = async (client, interaction, userNameOrId) => {
   return userNameOrId;
 };
 
-const _getUserTag = async (client, interaction, userNameOrId) => {
+const _getUserTag = async (app, interaction, userNameOrId) => {
   const unknown = 'Utilisateur inconnu';
   if (!userNameOrId) {
     return unknown;
   }
   if (userNameOrId.match(/^[0-9]+$/)) {
     try {
-      const guild = await client.guilds.fetch(interaction.guildId);
+      const guild = await app.client.guilds.fetch(interaction.guildId);
       const member = await guild.members.fetch(userNameOrId);
       if (!member) {
-        client.logger.error('user not in guild: ' + userNameOrId);
+        app.logger.error('user not in guild: ' + userNameOrId);
         return unknown;
       }
       return `<@${member.id}>`;
-      //const user = client.users.cache.get(userNameOrId);
+      //const user = app.client.users.cache.get(userNameOrId);
       //if (!user) {
-      //  client.logger.error('user not in cache: ' + userNameOrId);
+      //  app.logger.error('user not in cache: ' + userNameOrId);
       //  return unknown;
       //}
       //return `<@${user.id}>`;
@@ -625,17 +629,17 @@ const _getUserTag = async (client, interaction, userNameOrId) => {
   return userNameOrId;
 };
 
-const _getUserNames = async (client, interaction, usersOrIds = []) => {
+const _getUserNames = async (app, interaction, usersOrIds = []) => {
   const usernames = await amap(usersOrIds, async (userNameOrId) => {
-    const userName = await _getUserName(client, interaction, userNameOrId);
+    const userName = await _getUserName(app, interaction, userNameOrId);
     return userName;
   });
   return usernames;
 };
 
-const _getUserTags = async (client, interaction, usersOrIds = []) => {
+const _getUserTags = async (app, interaction, usersOrIds = []) => {
   const userTags = await amap(usersOrIds, async (userNameOrId) => {
-    const userTag = await _getUserTag(client, interaction, userNameOrId);
+    const userTag = await _getUserTag(app, interaction, userNameOrId);
     return userTag;
   });
   return userTags;
@@ -646,14 +650,14 @@ const _generateDallePrompt = (title) => {
   return prompt;
 };
 
-const _generateQuestEmbedShort = async (client, interaction, quest) => {
+const _generateQuestEmbedShort = async (app, interaction, quest) => {
   let title = helpers.preventEmbed(quest.title) || '*Sans titre*';
   let description = quest.description || '*Aucune description*';
   let icon = quest.icon || '';
   let image = quest.image || '';
   let players = quest.players || [];
 
-  const options = [];
+  const options: Array<string> = [];
   if (quest.private) options.push('🔒 privée');
   if (quest.daily) options.push('📅 journalière');
   if (quest.repeat) options.push('🔁 répétable');
@@ -666,8 +670,8 @@ const _generateQuestEmbedShort = async (client, interaction, quest) => {
 
   const color = quest.dateCompleted ? 0x00ff00 : helpers.colorFromId(quest.id);
   const footerUser = completedByUser
-    ? await _getUserName(client, interaction, completedByUser)
-    : await _getUserName(client, interaction, createdByUser);
+    ? await _getUserName(app, interaction, completedByUser)
+    : await _getUserName(app, interaction, createdByUser);
 
   console.log('footerUser', footerUser);
 
@@ -677,7 +681,7 @@ const _generateQuestEmbedShort = async (client, interaction, quest) => {
 
   const descriptionPlayerEmoji = players.length > 1 ? '👥' : '👤';
 
-  const userTags = await _getUserTags(client, interaction, players);
+  const userTags = await _getUserTags(app, interaction, players);
   console.log('userTags', userTags);
 
   const descriptionPlayers = userTags.join(', ');
@@ -688,7 +692,7 @@ const _generateQuestEmbedShort = async (client, interaction, quest) => {
 
   //const footerPlayers =
   //  players.length > 1
-  //    ? `👤 ${_getUserNames(client, players).join(', ')}\n`
+  //    ? `👤 ${_getUserNames(app, players).join(', ')}\n`
   //   : '';
 
   const footer = `${footerOptions}${footerPlayers}${footerStatus} ${footerUser}`;
@@ -710,11 +714,11 @@ const _generateQuestEmbedShort = async (client, interaction, quest) => {
   } else if (image !== '') {
     msgEmbed.setThumbnail(image);
   }
-  client.logger.debug(msgEmbed);
+  app.logger.debug(msgEmbed);
   return msgEmbed;
 };
 
-const _generateQuestEmbed = async (client, interaction, quest) => {
+const _generateQuestEmbed = async (app, interaction, quest) => {
   const emojiDaily = '📅';
   const emojiRepeat = '🔁';
   const emojiCompleted = '✅';
@@ -729,7 +733,7 @@ const _generateQuestEmbed = async (client, interaction, quest) => {
   let image = quest.image || '';
   let icon = quest.icon || '';
   let give = quest.give || '';
-  let players = await _getUserTags(client, interaction, quest.players || []);
+  let players = await _getUserTags(app, interaction, quest.players || []);
 
   const color = quest.dateCompleted ? 0x00ff00 : helpers.colorFromId(quest.id);
 
@@ -751,8 +755,8 @@ const _generateQuestEmbed = async (client, interaction, quest) => {
   //TODO: utiliser createdBy / completedBy
   const footerUser =
     quest.dateCompleted && completedByUser
-      ? await _getUserName(client, interaction, completedByUser)
-      : await _getUserName(client, interaction, createdByUser);
+      ? await _getUserName(app, interaction, completedByUser)
+      : await _getUserName(app, interaction, createdByUser);
 
   const footerStatus =
     quest.dateCompleted && completedByUser
@@ -783,16 +787,16 @@ const _generateQuestEmbed = async (client, interaction, quest) => {
   if (quest.dateCreated && createdByUser) {
     descriptionMsg += `\n\n**Crée** le ${helpers.formatEmbedFieldDate(
       quest.dateCompleted
-    )} par ${_getUserTag(client, completedByUser)}`;
+    )} par ${_getUserTag(app, completedByUser)}`;
   }
   if (quest.dateCompleted && completedByUser) {
     descriptionMsg += `\n\n**Accomplie** le ${helpers.formatEmbedFieldDate(
       quest.dateCompleted
-    )} par ${_getUserTag(client, completedByUser)}`;
+    )} par ${_getUserTag(app, completedByUser)}`;
   }
 */
   if (quest.dateCreated && createdByUser) {
-    const userTag = await _getUserTag(client, interaction, createdByUser);
+    const userTag = await _getUserTag(app, interaction, createdByUser);
     console.log('userTag', userTag);
     msgEmbed.addFields({
       name: 'Créée',
@@ -802,7 +806,7 @@ const _generateQuestEmbed = async (client, interaction, quest) => {
   }
 
   if (quest.dateCompleted && completedByUser) {
-    const userTag = await _getUserTag(client, interaction, completedByUser);
+    const userTag = await _getUserTag(app, interaction, completedByUser);
     console.log('userTag', userTag);
     msgEmbed.addFields({
       name: 'Accomplie',
@@ -820,7 +824,7 @@ const _generateQuestEmbed = async (client, interaction, quest) => {
     });
   }
 
-  let questOptions = [];
+  const questOptions: Array<string> = [];
   if (quest.daily) questOptions.push(`${emojiDaily} Quête quotidienne`);
   if (quest.private) questOptions.push(`${emojiPrivate} Quête privée`);
   if (quest.repeat) questOptions.push(`${emojiRepeat} Quête répétable`);
@@ -845,12 +849,12 @@ const _generateQuestEmbed = async (client, interaction, quest) => {
   }
 
   msgEmbed.setDescription(descriptionMsg);
-  client.logger.debug(msgEmbed);
+  app.logger.debug(msgEmbed);
   return msgEmbed;
 };
 
-async function commandAdd(client, interaction) {
-  const userName = client.users.cache.get(interaction.user.id).username; //TODO: check if user exists
+async function commandAdd(app, interaction) {
+  const userName = app.client.users.cache.get(interaction.user.id).username; //TODO: check if user exists
   const userId = interaction.user.id;
   const channelId = interaction.channelId;
   const channelName = interaction.channel.name;
@@ -859,14 +863,14 @@ async function commandAdd(client, interaction) {
   let image = interaction.options.getString('image') || '';
   let icon = interaction.options.getString('icon') || '';
   let give = interaction.options.getString('give') || '';
-  const private = interaction.options.getBoolean('private') || false;
+  const isPrivate = interaction.options.getBoolean('private') || false;
   const daily = interaction.options.getBoolean('daily') || false;
   const repeat = interaction.options.getBoolean('repeat') || false;
 
   let deferred = false;
 
   //Autogen images with dall-e?
-  if (client.config.USE_DALLE && (image === '' || icon === '')) {
+  if (app.config.USE_DALLE && (image === '' || icon === '')) {
     const prompt = _generateDallePrompt(title);
 
     //take long time so tell discord
@@ -874,11 +878,11 @@ async function commandAdd(client, interaction) {
     interaction.deferReply({ ephemeral: true });
 
     const dalleImage = await dalle.getDallEImage(prompt);
-    client.logger.debug(dalleImage);
+    app.logger.debug(dalleImage);
 
     //uploads to tppt
     const tpptUrl = await tppt.dalle2tppt(dalleImage);
-    client.logger.debug(tpptUrl);
+    app.logger.debug(tpptUrl);
 
     if (image === '') {
       image = tpptUrl;
@@ -898,12 +902,12 @@ async function commandAdd(client, interaction) {
     give: give,
     daily: daily,
     repeat: repeat,
-    private: private,
+    private: isPrivate,
     players: [userId],
   };
 
   try {
-    client.logger.info(
+    app.logger.info(
       `Ajout d'une quête ${_formatQuestTitle(
         title
       )} dans ${helpers.formatChannelName(
@@ -911,7 +915,7 @@ async function commandAdd(client, interaction) {
       )} par ${helpers.formatUsername(userName)}`
     );
     const newQuest = await api.createChannelQuest(channelId, quest);
-    client.logger.debug(newQuest);
+    app.logger.debug(newQuest);
     if (!deferred) {
       interaction.reply({
         content: `Quête ${_formatQuestTitle(quest.title)} ajoutée ! (ID: ${
@@ -928,14 +932,14 @@ async function commandAdd(client, interaction) {
       });
     }
   } catch (error) {
-    client.logger.error('Erreur lors de la commande add');
-    client.logger.debug(error.message);
-    client.logger.debug(error.stack);
+    app.logger.error('Erreur lors de la commande add');
+    app.logger.debug(error.message);
+    app.logger.debug(error.stack);
   }
 }
 
-async function commandUpdate(client, interaction) {
-  const userName = client.users.cache.get(interaction.user.id).username;
+async function commandUpdate(app, interaction) {
+  const userName = app.client.users.cache.get(interaction.user.id).username;
   const channelName = interaction.channel.name;
   const channelId = interaction.channel.id;
 
@@ -948,7 +952,7 @@ async function commandUpdate(client, interaction) {
   const give = interaction.options.getString('give') || false;
   const image = interaction.options.getString('image') || false;
   const icon = interaction.options.getString('icon') || false;
-  const private = interaction.options.getBoolean('private');
+  const isPrivate = interaction.options.getBoolean('private');
   const daily = interaction.options.getBoolean('daily');
   const repeat = interaction.options.getBoolean('repeat');
 
@@ -965,7 +969,7 @@ async function commandUpdate(client, interaction) {
   };
 
   try {
-    client.logger.info(
+    app.logger.info(
       `Modification de la quête [${id}] dans ${helpers.formatChannelName(
         channelName
       )} par ${helpers.formatUsername(userName)}`
@@ -990,29 +994,29 @@ async function commandUpdate(client, interaction) {
       quest.icon = optionnalNull(icon);
     }
 
-    if (private !== undefined) quest.private = private;
+    if (isPrivate !== undefined) quest.private = isPrivate;
     if (daily !== undefined) quest.daily = daily;
     if (repeat !== undefined) quest.repeat = repeat;
 
     const updatedQuest = await api.updateChannelQuest(channelId, id, quest);
-    client.logger.debug(updatedQuest);
+    app.logger.debug(updatedQuest);
     interaction.reply({ content: `Quête [${id}] modifiée !`, ephemeral: true });
   } catch (error) {
-    client.logger.error(`Erreur lors de la commande update`);
-    client.logger.debug(error.message);
-    client.logger.debug(error.stack);
+    app.logger.error(`Erreur lors de la commande update`);
+    app.logger.debug(error.message);
+    app.logger.debug(error.stack);
   }
 }
 
-async function commandShow(client, interaction, ephemeral = true) {
-  const userName = client.users.cache.get(interaction.user.id).username;
+async function commandShow(app, interaction, ephemeral = true) {
+  const userName = app.client.users.cache.get(interaction.user.id).username;
   const channelName = interaction.channel.name;
   const channelId = interaction.channelId;
   const id = interaction.options.getString('id');
   const full = interaction.options.getBoolean('full') || false;
   const short = !full;
   try {
-    client.logger.info(
+    app.logger.info(
       `Affichage de la quête [${id}] dans ${helpers.formatChannelName(
         channelName
       )} par ${helpers.formatUsername(userName)} ` +
@@ -1021,35 +1025,35 @@ async function commandShow(client, interaction, ephemeral = true) {
     const quest = await api.getChannelQuestById(channelId, id);
 
     //replace users ids by names
-    //quest.players = _getUserNames(client, quest.players || []);
+    //quest.players = _getUserNames(app, quest.players || []);
     //if (quest.createdBy)
-    //  quest.createdBy = _getUserName(client, quest.createdBy);
+    //  quest.createdBy = _getUserName(app, quest.createdBy);
     //if (quest.completedBy)
-    //  quest.completedBy = _getUserName(client, quest.completedBy);
+    //  quest.completedBy = _getUserName(app, quest.completedBy);
 
-    client.logger.debug(quest);
+    app.logger.debug(quest);
     const msg = short
       ? ''
       : `${interaction.member} souhaite vous montrer cette quête:`;
     const embed = short
-      ? await _generateQuestEmbedShort(client, interaction, quest)
-      : await _generateQuestEmbed(client, interaction, quest);
+      ? await _generateQuestEmbedShort(app, interaction, quest)
+      : await _generateQuestEmbed(app, interaction, quest);
     await interaction.reply({
       content: msg,
       embeds: [embed],
       ephemeral: ephemeral === true,
     });
   } catch (error) {
-    client.logger.error(
+    app.logger.error(
       'Erreur lors de la commande ' + (ephemeral ? 'info' : 'show')
     );
-    client.logger.debug(error.message);
-    client.logger.debug(error.stack);
+    app.logger.debug(error.message);
+    app.logger.debug(error.stack);
   }
 }
 
-async function commandList(client, interaction) {
-  const userName = client.users.cache.get(interaction.user.id).username;
+async function commandList(app, interaction) {
+  const userName = app.client.users.cache.get(interaction.user.id).username;
 
   let channelId = interaction.channelId;
   let channelName = interaction.channel.name;
@@ -1063,7 +1067,7 @@ async function commandList(client, interaction) {
   const ephemeral = show === true ? false : true;
 
   if (bychannel !== false) {
-    const channel = client.channels.cache.find(
+    const channel = app.client.channels.cache.find(
       (channel) => channel.id === bychannel
     );
     if (channel.partial) await channel.fetch();
@@ -1072,7 +1076,7 @@ async function commandList(client, interaction) {
   }
 
   try {
-    client.logger.info(
+    app.logger.info(
       `Liste des quêtes de ${helpers.formatChannelName(
         channelName
       )} demandée par ${helpers.formatUsername(userName)}`
@@ -1083,7 +1087,7 @@ async function commandList(client, interaction) {
 
     //filter deleted
     const quests = questsAll.filter((quest) => !quest.dateDeleted);
-    client.logger.debug(quests);
+    app.logger.debug(quests);
 
     //response message text
     let msg = '';
@@ -1104,20 +1108,20 @@ async function commandList(client, interaction) {
       ephemeral: ephemeral,
     });
   } catch (error) {
-    client.logger.error('Erreur lors de la commande ' + 'list', error);
-    client.logger.debug(error.message);
-    client.logger.debug(error.stack);
+    app.logger.error('Erreur lors de la commande ' + 'list', error);
+    app.logger.debug(error.message);
+    app.logger.debug(error.stack);
   }
 }
 
-async function commandComplete(client, interaction) {
+async function commandComplete(app, interaction) {
   const userId = interaction.user.id;
-  const userName = client.users.cache.get(interaction.user.id).username;
+  const userName = app.client.users.cache.get(interaction.user.id).username;
   const channelId = interaction.channelId;
   const channelName = interaction.channel.name;
   const questId = interaction.options.getString('id');
   try {
-    client.logger.info(
+    app.logger.info(
       `Validation de la quête [${questId}] demandée dans ${helpers.formatChannelName(
         channelName
       )} par ${helpers.formatUsername(userName)}`
@@ -1155,7 +1159,7 @@ async function commandComplete(client, interaction) {
       questId,
       userId
     );
-    client.logger.debug(completedQuest);
+    app.logger.debug(completedQuest);
 
     //private or no annouce = reply to user. else to channel
 
@@ -1173,30 +1177,30 @@ async function commandComplete(client, interaction) {
       interaction.reply({
         content: `${interaction.member} a terminé une quête !`,
         embeds: [
-          await _generateQuestEmbedShort(client, interaction, completedQuest),
+          await _generateQuestEmbedShort(app, interaction, completedQuest),
         ],
       });
     }
   } catch (error) {
-    client.logger.error('Erreur lors de la commande complete');
-    client.logger.debug(error.message);
-    client.logger.debug(error.stack);
+    app.logger.error('Erreur lors de la commande complete');
+    app.logger.debug(error.message);
+    app.logger.debug(error.stack);
   }
 }
 
-async function commandDelete(client, interaction) {
-  const userName = client.users.cache.get(interaction.user.id).username;
+async function commandDelete(app, interaction) {
+  const userName = app.client.users.cache.get(interaction.user.id).username;
   const channelName = interaction.channel.name;
   const channelId = interaction.channelId;
   const id = interaction.options.getString('id');
   try {
-    client.logger.info(
+    app.logger.info(
       `Suppression de la quête [${id}] dans ${helpers.formatChannelName(
         channelName
       )} par ${helpers.formatUsername(userName)}`
     );
     const deletedQuest = await api.deleteChannelQuest(channelId, id);
-    client.logger.debug(deletedQuest);
+    app.logger.debug(deletedQuest);
     interaction.reply({
       content: `Quête ${_formatQuestId(id)} ${_formatQuestTitle(
         deletedQuest.title
@@ -1204,25 +1208,25 @@ async function commandDelete(client, interaction) {
       ephemeral: true,
     });
   } catch (error) {
-    client.logger.error(`Erreur lors de la commande delete`);
-    client.logger.debug(error.message);
-    client.logger.debug(error.stack);
+    app.logger.error(`Erreur lors de la commande delete`);
+    app.logger.debug(error.message);
+    app.logger.debug(error.stack);
   }
 }
 
-async function commandUncomplete(client, interaction) {
-  const userName = client.users.cache.get(interaction.user.id).username;
+async function commandUncomplete(app, interaction) {
+  const userName = app.client.users.cache.get(interaction.user.id).username;
   const channelName = interaction.channel.name;
   const channelId = interaction.channelId;
   const id = interaction.options.getString('id');
   try {
-    client.logger.info(
+    app.logger.info(
       `Invalidation de la quête [${id}] dans ${helpers.formatChannelName(
         channelName
       )} par ${helpers.formatUsername(userName)}`
     );
     const uncompletedQuest = await api.uncompleteChannelQuest(channelId, id);
-    client.logger.debug(uncompletedQuest);
+    app.logger.debug(uncompletedQuest);
     interaction.reply({
       content: `Quête ${_formatQuestId(id)} ${_formatQuestTitle(
         uncompletedQuest.title
@@ -1230,25 +1234,25 @@ async function commandUncomplete(client, interaction) {
       ephemeral: true,
     });
   } catch (error) {
-    client.logger.error(`Erreur lors de la commande uncomplete`);
-    client.logger.debug(error.message);
-    client.logger.debug(error.stack);
+    app.logger.error(`Erreur lors de la commande uncomplete`);
+    app.logger.debug(error.message);
+    app.logger.debug(error.stack);
   }
 }
 
-async function commandUndelete(client, interaction) {
-  const userName = client.users.cache.get(interaction.user.id).username;
+async function commandUndelete(app, interaction) {
+  const userName = app.client.users.cache.get(interaction.user.id).username;
   const channelName = interaction.channel.name;
   const channelId = interaction.channelId;
   const id = interaction.options.getString('id');
   try {
-    client.logger.info(
+    app.logger.info(
       `Annulation de la suppression de la quête [${id}] dans ${helpers.formatChannelName(
         channelName
       )} par ${helpers.formatUsername(userName)}`
     );
     const undeletedQuest = await api.undeleteChannelQuest(channelId, id);
-    client.logger.debug(undeletedQuest);
+    app.logger.debug(undeletedQuest);
     interaction.reply({
       content: `Quête ${_formatQuestId(id)} ${_formatQuestTitle(
         undeletedQuest.title
@@ -1256,28 +1260,28 @@ async function commandUndelete(client, interaction) {
       ephemeral: true,
     });
   } catch (error) {
-    client.logger.error(`Erreur lors de la commande undelete`);
-    client.logger.debug(error.message);
-    client.logger.debug(error.stack);
+    app.logger.error(`Erreur lors de la commande undelete`);
+    app.logger.debug(error.message);
+    app.logger.debug(error.stack);
   }
 }
 
 /* Autocomplete Methods */
 
-async function autocompleteGetAllQuestIds(client, interaction) {
+async function autocompleteGetAllQuestIds(app, interaction) {
   const quests = await api.getChannelQuests(interaction.channel.id);
   //sort by most recent first
   quests.sort((a, b) => {
-    return new Date(b.dateCreated) - new Date(a.dateCreated);
+    return getTime(b.dateCreated) - getTime(a.dateCreated);
   });
   return quests.map((quest) => _formatAutocompleteQuest(quest));
 }
 
-async function autocompleteGetDeletableQuestIds(client, interaction) {
+async function autocompleteGetDeletableQuestIds(app, interaction) {
   const quests = await api.getChannelQuests(interaction.channel.id);
   //sort by most recent first
-  quests.sort((a, b) => {
-    return new Date(b.dateCreated) - new Date(a.dateCreated);
+  quests.sort((a, b): number => {
+    return getTime(b.dateCreated) - getTime(a.dateCreated);
   });
   return quests
     .filter(
@@ -1286,22 +1290,22 @@ async function autocompleteGetDeletableQuestIds(client, interaction) {
     .map((quest) => _formatAutocompleteQuest(quest));
 }
 
-async function autocompleteGetDeletedQuestIds(client, interaction) {
+async function autocompleteGetDeletedQuestIds(app, interaction) {
   const quests = await api.getChannelQuests(interaction.channel.id);
   //sort by most recent first
   quests.sort((a, b) => {
-    return new Date(b.dateCreated) - new Date(a.dateCreated);
+    return getTime(b.dateCreated) - getTime(a.dateCreated);
   });
   return quests
     .filter((quest) => quest.dateDeleted)
     .map((quest) => _formatAutocompleteQuest(quest));
 }
 
-async function autocompleteGetCompletableQuestIds(client, interaction) {
+async function autocompleteGetCompletableQuestIds(app, interaction) {
   const quests = await api.getChannelQuests(interaction.channel.id);
   //sort by most recent first
   quests.sort((a, b) => {
-    return new Date(b.dateCreated) - new Date(a.dateCreated);
+    return getTime(b.dateCreated) - getTime(a.dateCreated);
   });
   return quests
     .filter(
@@ -1311,11 +1315,11 @@ async function autocompleteGetCompletableQuestIds(client, interaction) {
     .map((quest) => _formatAutocompleteQuest(quest));
 }
 
-async function autocompleteGetCompletedQuestIds(client, interaction) {
+async function autocompleteGetCompletedQuestIds(app, interaction) {
   const quests = await api.getChannelQuests(interaction.channel.id);
   //sort by most recent first
   quests.sort((a, b) => {
-    return new Date(b.dateCreated) - new Date(a.dateCreated);
+    return getTime(b.dateCreated) - getTime(a.dateCreated);
   });
   return quests
     .filter((quest) => quest.dateCompleted !== undefined)
@@ -1323,10 +1327,10 @@ async function autocompleteGetCompletedQuestIds(client, interaction) {
 }
 
 //return all current interaction guild 's channels with at least one quest
-async function autocompleteGetAllChannelsWithQuests(client, interaction) {
+async function autocompleteGetAllChannelsWithQuests(app, interaction) {
   const channelsIdWithQuests = await api.getChannelsWithQuests();
   const channels = channelsIdWithQuests.map(async (channelId) => {
-    const channel = client.channels.cache.get(channelId);
+    const channel = app.client.channels.cache.get(channelId);
     if (channel.partial) {
       await channel.fetch();
     }
@@ -1336,9 +1340,9 @@ async function autocompleteGetAllChannelsWithQuests(client, interaction) {
 }
 
 //return all current interaction guild 's channels
-async function autocompleteGetAllChannels(client, interaction) {
+async function autocompleteGetAllChannels(app, interaction) {
   //get current interaction guild 's channels list
-  const channels = client.channels.cache.filter(async (channel) => {
+  const channels = app.client.channels.cache.filter(async (channel) => {
     //filter channels
     return (
       channel.type === 0 && //text channel
@@ -1348,8 +1352,8 @@ async function autocompleteGetAllChannels(client, interaction) {
   return channels.map((channel) => _formatAutocompleteChannel(channel));
 }
 
-async function autocompleteGetAllUsers(client, interaction) {
-  const users = client.users.cache;
+async function autocompleteGetAllUsers(app, interaction) {
+  const users = app.client.users.cache;
   return users.map(async (user) => {
     //need fetch ?
     if (user.partial) {
@@ -1361,7 +1365,7 @@ async function autocompleteGetAllUsers(client, interaction) {
 
 /* Command Methods */
 
-async function commandSettingsAnnounceCreate(client, interaction) {
+async function commandSettingsAnnounceCreate(app, interaction) {
   const value = interaction.options.getBoolean('value');
   try {
     const settings = await api.getUserSettings(interaction.user.id);
@@ -1376,13 +1380,13 @@ async function commandSettingsAnnounceCreate(client, interaction) {
     const loggerMsg = `User ${
       interaction.member
     } set ANNOUNCE_CREATE setting to ${value.toString().toLocaleUpperCase()}`;
-    client.logger.info(loggerMsg);
+    app.logger.info(loggerMsg);
   } catch (error) {
-    client.logger.error(error);
+    app.logger.error(error);
   }
 }
 
-async function commandSettingsAnnounceUpdate(client, interaction) {
+async function commandSettingsAnnounceUpdate(app, interaction) {
   const value = interaction.options.getBoolean('value');
   try {
     const settings = await api.getUserSettings(interaction.user.id);
@@ -1397,13 +1401,13 @@ async function commandSettingsAnnounceUpdate(client, interaction) {
     const loggerMsg = `User ${
       interaction.user.username
     } set ANNOUNCE_UPDATE setting to ${value.toString().toLocaleUpperCase()}`;
-    client.logger.info(loggerMsg);
+    app.logger.info(loggerMsg);
   } catch (error) {
-    client.logger.error(error);
+    app.logger.error(error);
   }
 }
 
-async function commandSettingsAnnounceComplete(client, interaction) {
+async function commandSettingsAnnounceComplete(app, interaction) {
   const value = interaction.options.getBoolean('value');
   try {
     const settings = await api.getUserSettings(interaction.user.id);
@@ -1418,13 +1422,13 @@ async function commandSettingsAnnounceComplete(client, interaction) {
     const loggerMsg = `User ${
       interaction.member
     } set ANNOUNCE_COMPLETE setting to ${value.toString().toLocaleUpperCase()}`;
-    client.logger.info(loggerMsg);
+    app.logger.info(loggerMsg);
   } catch (error) {
-    client.logger.error(error);
+    app.logger.error(error);
   }
 }
 
-async function commandSettingsAnnounceUncomplete(client, interaction) {
+async function commandSettingsAnnounceUncomplete(app, interaction) {
   const value = interaction.options.getBoolean('value');
   try {
     const settings = await api.getUserSettings(interaction.user.id);
@@ -1441,13 +1445,13 @@ async function commandSettingsAnnounceUncomplete(client, interaction) {
     } set ANNOUNCE_UNCOMPLETE setting to ${value
       .toString()
       .toLocaleUpperCase()}`;
-    client.logger.info(loggerMsg);
+    app.logger.info(loggerMsg);
   } catch (error) {
-    client.logger.error(error);
+    app.logger.error(error);
   }
 }
 
-async function commandSettingsAnnounceDelete(client, interaction) {
+async function commandSettingsAnnounceDelete(app, interaction) {
   const value = interaction.options.getBoolean('value');
   try {
     const settings = await api.getUserSettings(interaction.user.id);
@@ -1462,13 +1466,13 @@ async function commandSettingsAnnounceDelete(client, interaction) {
     const loggerMsg = `User ${
       interaction.user.username
     } set ANNOUNCE_DELETE setting to ${value.toString().toLocaleUpperCase()}`;
-    client.logger.info(loggerMsg);
+    app.logger.info(loggerMsg);
   } catch (error) {
-    client.logger.error(error);
+    app.logger.error(error);
   }
 }
 
-async function commandSettingsAnnounceUndelete(client, interaction) {
+async function commandSettingsAnnounceUndelete(app, interaction) {
   const value = interaction.options.getBoolean('value');
   try {
     const settings = await api.getUserSettings(interaction.user.id);
@@ -1483,13 +1487,13 @@ async function commandSettingsAnnounceUndelete(client, interaction) {
     const loggerMsg = `User ${
       interaction.member
     } set ANNOUNCE_UNDELETE setting to ${value.toString().toLocaleUpperCase()}`;
-    client.logger.info(loggerMsg);
+    app.logger.info(loggerMsg);
   } catch (error) {
-    client.logger.error(error);
+    app.logger.error(error);
   }
 }
 
-async function commandSettingsPublicName(client, interaction) {
+async function commandSettingsPublicName(app, interaction) {
   const value = interaction.options.getString('value');
   try {
     const settings = await api.getUserSettings(interaction.user.id);
@@ -1502,13 +1506,13 @@ async function commandSettingsPublicName(client, interaction) {
     const loggerMsg = `User ${
       interaction.member
     } set PUBLIC_NAME setting to ${value.toString().toLocaleUpperCase()}`;
-    client.logger.info(loggerMsg);
+    app.logger.info(loggerMsg);
   } catch (error) {
-    client.logger.error(error);
+    app.logger.error(error);
   }
 }
 
-async function commandSettingsPublicAvatar(client, interaction) {
+async function commandSettingsPublicAvatar(app, interaction) {
   const value = interaction.options.getString('value');
   try {
     const settings = await api.getUserSettings(interaction.user.id);
@@ -1521,16 +1525,16 @@ async function commandSettingsPublicAvatar(client, interaction) {
     const loggerMsg = `User ${
       interaction.member
     } set PUBLIC_AVATAR setting to ${value.toString().toLocaleUpperCase()}`;
-    client.logger.info(loggerMsg);
+    app.logger.info(loggerMsg);
   } catch (error) {
-    client.logger.error(error);
+    app.logger.error(error);
   }
 }
 
-async function commandSettingsList(client, interaction) {
-  const userName = client.users.cache.get(interaction.user.id).username;
+async function commandSettingsList(app, interaction) {
+  const userName = app.client.users.cache.get(interaction.user.id).username;
   try {
-    client.logger.info(
+    app.logger.info(
       `Liste des paramètres de ${helpers.formatUsername(userName)}`
     );
     const settings = await api.getUserSettings(interaction.user.id);
@@ -1542,26 +1546,26 @@ async function commandSettingsList(client, interaction) {
       ephemeral: true,
     });
   } catch (error) {
-    client.logger.error(`Erreur lors de la commande settings list`);
-    client.logger.debug(error.message);
-    client.logger.debug(error.stack);
+    app.logger.error(`Erreur lors de la commande settings list`);
+    app.logger.debug(error.message);
+    app.logger.debug(error.stack);
   }
 }
 
-async function commandPlayerAdd(client, interaction) {
+async function commandPlayerAdd(app, interaction) {
   const userId = interaction.user.id;
   const channelId = interaction.channelId;
-  const userName = client.users.cache.get(userId).username;
+  const userName = app.client.users.cache.get(userId).username;
   const player = interaction.options.getUser('player') || false;
   const questId = interaction.options.getString('id') || false;
   try {
-    client.logger.info(
+    app.logger.info(
       `Ajout du joueur ${helpers.formatUsername(
         player.userName
       )} à la quête ${questId} par ${helpers.formatUsername(userName)}`
     );
     const quest = await api.addPlayerToQuest(channelId, questId, player.id);
-    client.logger.debug(quest);
+    app.logger.debug(quest);
 
     interaction.reply({
       content: `Joueur ${helpers.formatUsername(
@@ -1570,20 +1574,20 @@ async function commandPlayerAdd(client, interaction) {
       ephemeral: true,
     });
   } catch (error) {
-    client.logger.error(`Erreur lors de la commande player add`);
-    client.logger.debug(error.message);
-    client.logger.debug(error.stack);
+    app.logger.error(`Erreur lors de la commande player add`);
+    app.logger.debug(error.message);
+    app.logger.debug(error.stack);
   }
 }
 
-async function commandPlayerRemove(client, interaction) {
+async function commandPlayerRemove(app, interaction) {
   const userId = interaction.user.id;
   const channelId = interaction.channelId;
-  const userName = client.users.cache.get(userId).username;
+  const userName = app.client.users.cache.get(userId).username;
   const player = interaction.options.getUser('player') || false;
   const questId = interaction.options.getString('id') || false;
   try {
-    client.logger.info(
+    app.logger.info(
       `Retrait du joueur ${helpers.formatUsername(
         player.userName
       )} de la quête ${questId} par ${helpers.formatUsername(userName)}`
@@ -1593,7 +1597,6 @@ async function commandPlayerRemove(client, interaction) {
       questId,
       player.id
     );
-    client.logger.debug(quest);
     interaction.reply({
       content: `Joueur ${helpers.formatUsername(
         player.username
@@ -1601,20 +1604,94 @@ async function commandPlayerRemove(client, interaction) {
       ephemeral: true,
     });
   } catch (error) {
-    client.logger.error(`Erreur lors de la commande player remove`);
-    client.logger.debug(error.message);
-    client.logger.debug(error.stack);
+    app.logger.error(`Erreur lors de la commande player remove`);
+    app.logger.debug(error.message);
+    app.logger.debug(error.stack);
   }
 }
+
+const commandTagAdd = async (app, interaction) => {
+  const userId = interaction.user.id;
+  const channelId = interaction.channelId;
+  const userName = app.client.users.cache.get(userId).username;
+  const tag = interaction.options.getString('tag') || false;
+  const questId = interaction.options.getString('id') || false;
+  try {
+    app.logger.info(
+      `Ajout du tag ${tag} à la quête ${questId} par ${helpers.formatUsername(
+        userName
+      )}`
+    );
+    const quest = await api.addTagToQuest(channelId, questId, tag);
+    interaction.reply({
+      content: `Tag ${tag} ajouté à la quête ${questId}!`,
+      ephemeral: true,
+    });
+  } catch (error) {
+    app.logger.error(`Erreur lors de la commande tag add`);
+    app.logger.debug(error.message);
+    app.logger.debug(error.stack);
+  }
+};
+
+const commandTagRemove = async (app, interaction) => {
+  const userId = interaction.user.id;
+  const channelId = interaction.channelId;
+  const userName = app.client.users.cache.get(userId).username;
+  const tag = interaction.options.getString('tag') || false;
+  const questId = interaction.options.getString('id') || false;
+  try {
+    app.logger.info(
+      `Retrait du tag ${tag} de la quête ${questId} par ${helpers.formatUsername(
+        userName
+      )}`
+    );
+    const quest = await api.removeTagFromQuest(channelId, questId, tag);
+    app.logger.debug(quest);
+    interaction.reply({
+      content: `Tag ${tag} retiré de la quête ${questId}!`,
+      ephemeral: true,
+    });
+  } catch (error) {
+    app.logger.error(`Erreur lors de la commande tag remove`);
+    app.logger.debug(error.message);
+    app.logger.debug(error.stack);
+  }
+};
+
+const commandTagList = async (app, interaction) => {
+  const userId = interaction.user.id;
+  const channelId = interaction.channelId;
+  const userName = app.client.users.cache.get(userId).username;
+  const questId = interaction.options.getString('id') || false;
+  try {
+    app.logger.info(
+      `Liste des tags de la quête ${questId} par ${helpers.formatUsername(
+        userName
+      )}`
+    );
+    const quest = await api.getQuest(channelId, questId);
+    const tags = quest.tags;
+    app.logger.debug(tags);
+    interaction.reply({
+      content: `Tags de la quête ${questId} : ${tags.join(', ')}`,
+      ephemeral: true,
+    });
+  } catch (error) {
+    app.logger.error(`Erreur lors de la commande tag list`);
+    app.logger.debug(error.message);
+    app.logger.debug(error.stack);
+  }
+};
 
 /* Module exports */
 
 module.exports = {
   data: commands,
-  async execute(client, interaction) {
+  async execute(app, interaction) {
     const subcommand = interaction.options.getSubcommand();
     const commandgroup = interaction.options.getSubcommandGroup();
-    client.logger.debug(
+    app.logger.debug(
       `Commande ${subcommand}${
         commandgroup != null ? ` (du groupe ${commandgroup})` : ''
       } lancée par ${interaction.user.username}`
@@ -1623,25 +1700,25 @@ module.exports = {
       case null:
         switch (subcommand) {
           case 'create':
-            return await commandAdd(client, interaction);
+            return await commandAdd(app, interaction);
           case 'update':
-            return await commandUpdate(client, interaction);
+            return await commandUpdate(app, interaction);
           case 'preview':
-            return await commandShow(client, interaction, true);
+            return await commandShow(app, interaction, true);
           case 'show':
-            return await commandShow(client, interaction, false);
+            return await commandShow(app, interaction, false);
           case 'list':
-            return await commandList(client, interaction);
+            return await commandList(app, interaction);
           //case 'showlist':
-          //  return await commandList(client, interaction, false);
+          //  return await commandList(app, interaction, false);
           case 'complete':
-            return await commandComplete(client, interaction);
+            return await commandComplete(app, interaction);
           case 'uncomplete':
-            return await commandUncomplete(client, interaction);
+            return await commandUncomplete(app, interaction);
           case 'delete':
-            return await commandDelete(client, interaction);
+            return await commandDelete(app, interaction);
           case 'undelete':
-            return await commandUndelete(client, interaction);
+            return await commandUndelete(app, interaction);
           default:
             interaction.reply({
               content: `Désolé mais, la commande ${subcommand} n'existe pas ou n'est pas encore implementée :(`,
@@ -1652,9 +1729,9 @@ module.exports = {
       case 'player':
         switch (subcommand) {
           case 'add':
-            return await commandPlayerAdd(client, interaction);
+            return await commandPlayerAdd(app, interaction);
           case 'remove':
-            return await commandPlayerRemove(client, interaction);
+            return await commandPlayerRemove(app, interaction);
           default:
             interaction.reply({
               content: `Désolé mais, la commande ${commandgroup} ${subcommand} n'existe pas ou n'est pas encore implementée :(`,
@@ -1665,11 +1742,11 @@ module.exports = {
       case 'tag':
         switch (subcommand) {
           case 'add':
-            return await commandTaggAdd(client, interaction);
+            return await commandTagAdd(app, interaction);
           case 'remove':
-            return await commandTagRemove(client, interaction);
+            return await commandTagRemove(app, interaction);
           case 'list':
-            return await commandTagList(client, interaction);
+            return await commandTagList(app, interaction);
           default:
             interaction.reply({
               content: `Désolé mais, la commande ${commandgroup} ${subcommand} n'existe pas ou n'est pas encore implementée :(`,
@@ -1680,23 +1757,23 @@ module.exports = {
       case 'settings':
         switch (subcommand) {
           case 'list':
-            return await commandSettingsList(client, interaction);
+            return await commandSettingsList(app, interaction);
           case 'announce_create':
-            return await commandSettingsAnnounceCreate(client, interaction);
+            return await commandSettingsAnnounceCreate(app, interaction);
           case 'announce_update':
-            return await commandSettingsAnnounceUpdate(client, interaction);
+            return await commandSettingsAnnounceUpdate(app, interaction);
           case 'announce_complete':
-            return await commandSettingsAnnounceComplete(client, interaction);
+            return await commandSettingsAnnounceComplete(app, interaction);
           case 'announce_delete':
-            return await commandSettingsAnnounceDelete(client, interaction);
+            return await commandSettingsAnnounceDelete(app, interaction);
           case 'announce_undelete':
-            return await commandSettingsAnnounceUndelete(client, interaction);
+            return await commandSettingsAnnounceUndelete(app, interaction);
           case 'announce_uncomplete':
-            return await commandSettingsAnnounceUncomplete(client, interaction);
+            return await commandSettingsAnnounceUncomplete(app, interaction);
           case 'public_name':
-            return await commandSettingsPublicName(client, interaction);
+            return await commandSettingsPublicName(app, interaction);
           case 'public_avatar':
-            return await commandSettingsPublicAvatar(client, interaction);
+            return await commandSettingsPublicAvatar(app, interaction);
           default:
             interaction.reply({
               content: `Désolé mais, la commande ${commandgroup} ${subcommand} n'existe pas ou n'est pas encore implementée :(`,
@@ -1712,43 +1789,40 @@ module.exports = {
         return;
     }
   },
-  async autocomplete(client, interaction) {
+  async autocomplete(app, interaction) {
     const focusedOption = interaction.options.getFocused(true);
     const subcommand = interaction.options.getSubcommand();
     let choices = [];
     switch (focusedOption.name) {
       case 'id':
         if (subcommand === 'undelete') {
-          choices = await autocompleteGetDeletedQuestIds(client, interaction);
+          choices = await autocompleteGetDeletedQuestIds(app, interaction);
         } else if (subcommand === 'uncomplete') {
-          choices = await autocompleteGetCompletedQuestIds(client, interaction);
+          choices = await autocompleteGetCompletedQuestIds(app, interaction);
         } else if (subcommand === 'complete') {
-          choices = await autocompleteGetCompletableQuestIds(
-            client,
-            interaction
-          );
+          choices = await autocompleteGetCompletableQuestIds(app, interaction);
         } else {
-          choices = await autocompleteGetDeletableQuestIds(client, interaction);
+          choices = await autocompleteGetDeletableQuestIds(app, interaction);
         }
         break;
       case 'channel':
         //check subcommand
         if (subcommand === 'showlist' || subcommand === 'list') {
           choices = await autocompleteGetAllChannelsWithQuests(
-            client,
+            app,
             interaction
           );
         } else {
-          choices = await autocompleteGetAllChannels(client, interaction);
+          choices = await autocompleteGetAllChannels(app, interaction);
         }
         break;
       case 'user':
-        choices = await autocompleteGetAllUsers(client, interaction);
+        choices = await autocompleteGetAllUsers(app, interaction);
         break;
       default:
         break;
     }
-    const filtered = choices.filter((choice) => {
+    const filtered = choices.filter((choice: any) => {
       //return only choices that name property contains the value. case insensitive
       return (
         choice.name.toLowerCase().indexOf(focusedOption.value.toLowerCase()) >

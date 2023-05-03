@@ -5,3 +5,4 @@ node_modules
 .gitignore
 .git
 eslintrc.js
+dist/

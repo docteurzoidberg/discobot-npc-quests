@@ -1,4 +1,13 @@
-FROM node:18-alpine
+FROM node:18-alpine3.16 AS builder
+WORKDIR /app
+COPY . .
+RUN npm install \
+&& npm install typescript -g \
+&& npm run build \
+&& rm -rf node_modules
+
+
+FROM node:18-alpine3.16 AS cronrunner
 
 ENV NODE_ENV production
 ENV LANG C.UTF-8
@@ -10,25 +19,20 @@ RUN mkdir /data
 # APP dir
 WORKDIR /app
 
-# NODE_MODULES
-COPY package*.json ./
-RUN npm install --production
-RUN npm install -g pino-pretty
+COPY --from=builder ./app/dist ./dist
+COPY package* ./
 
-# APP
-COPY . .
 
-RUN mkdir /app/bin
-RUN touch /app/bin/resetdaily.sh
-RUN echo "#!/bin/bash" >> /app/bin/resetdaily.sh
-RUN echo "cd /app" >> /app/bin/resetdaily.sh
-RUN echo "npm run resetdaily" >> /app/bin/resetdaily.sh
-RUN chmod +x /app/bin/resetdaily.sh
-
-RUN touch /etc/crontabs/root
-RUN echo "0 0 * * * /app/bin/resetdaily.sh" >> /etc/crontabs/root
-RUN echo "# m h  dom mon dow   command" >> /etc/crontabs/root
-RUN echo "" >> /etc/crontabs/root
+RUN mkdir /app/bin \
+&& touch /app/bin/resetdaily.sh \
+&& echo "#!/bin/bash" >> /app/bin/resetdaily.sh \
+&& echo "cd /app" >> /app/bin/resetdaily.sh \
+&& echo "npm run resetdaily" >> /app/bin/resetdaily.sh \
+&& chmod +x /app/bin/resetdaily.sh \
+&& touch /etc/crontabs/root \
+&& echo "0 0 * * * /app/bin/resetdaily.sh" >> /etc/crontabs/root \
+&& echo "# m h  dom mon dow   command" >> /etc/crontabs/root \
+&& echo "" >> /etc/crontabs/root
 
 # start crond with log level 8 in foreground, output to stderr
 CMD ["crond", "-f", "-d", "8"]

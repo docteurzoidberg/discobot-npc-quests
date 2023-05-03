@@ -1,7 +1,14 @@
-require('dotenv').config({ path: __dirname + '/../.env' });
+import * as dotenv from 'dotenv';
 
-const dalle = require('./lib/openai-dall-e');
-const tppt = require('./lib/tppt-api');
+dotenv.config({
+  path:
+    __dirname +
+    '/../.env' +
+    (process.env.NODE_ENV ? '.' + process.env.NODE_ENV : ''),
+});
+
+import * as dalle from './lib/openai-dall-e';
+import * as tppt from './lib/tppt-api';
 
 const avatarUrl =
   'https://cdn.discordapp.com/avatars/169141120339673088/c7b1c0635e581bb6d4ed30fb3176071b.webp?size=80';
@@ -22,3 +29,5 @@ const prompt = `imagine un personnage de jeu rpg en style pixel-art vue top-down
   }
   // `text` is not available here
 })();
+
+export {};
