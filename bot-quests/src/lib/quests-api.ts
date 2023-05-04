@@ -1,8 +1,14 @@
-require('dotenv').config({ path: __dirname + '/../../.env' });
+import * as dotenv from 'dotenv';
+import * as fetch from 'node-fetch';
+
+dotenv.config({
+  path:
+    __dirname +
+    '/../../.env' +
+    (process.env.NODE_ENV ? '.' + process.env.NODE_ENV : ''),
+});
 
 const API_URL = process.env.API_URL || false;
-
-const fetch = require('node-fetch');
 
 export async function resetDailyQuestsInChannel(channelId) {
   const response = await fetch(`${API_URL}/quests/${channelId}/reset`, {

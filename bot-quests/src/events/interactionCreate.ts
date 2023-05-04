@@ -1,6 +1,8 @@
+import { BotApplication } from '../types/BotApplication';
+
 module.exports = {
   name: 'interactionCreate',
-  async execute(app, interaction) {
+  async execute(app: BotApplication, interaction) {
     //log interaction
     const type = interaction.isCommand() ? 'a command' : 'an autocomplete';
     app.logger.debug(

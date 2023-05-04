@@ -1,16 +1,16 @@
+import * as fs from 'fs';
+import * as dotenv from 'dotenv';
+import { REST } from '@discordjs/rest';
+import { Routes } from 'discord-api-types/v9';
 import { CommandModule } from './types/CommandModule';
+import { default as logger } from './logger';
 
-require('dotenv').config({
+dotenv.config({
   path:
     __dirname +
     '/../.env' +
     (process.env.NODE_ENV ? '.' + process.env.NODE_ENV : ''),
 });
-
-const logger = require('pino')({ level: process.env.LOG_LEVEL || 'debug' });
-const fs = require('fs');
-const { REST } = require('@discordjs/rest');
-const { Routes } = require('discord-api-types/v9');
 
 const commandsDir = __dirname + '/commands';
 const commands: Array<CommandModule> = [];

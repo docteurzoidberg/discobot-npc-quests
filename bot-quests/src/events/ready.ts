@@ -1,3 +1,5 @@
+import { BotApplication } from '../types/BotApplication';
+
 interface Server {
   name: string;
   id: string;
@@ -6,7 +8,7 @@ interface Server {
 module.exports = {
   name: 'ready',
   once: true,
-  async execute(app) {
+  async execute(app: BotApplication) {
     const guilds = app.client.guilds.cache;
     const serverArray: Array<Server> = [];
 
@@ -33,7 +35,7 @@ module.exports = {
         guilds.size
       } servers: ${serverList.join(', ')}`
     );
-    if (app.invisible) {
+    if (app.config.INVISIBLE) {
       app.logger.warn('Bot status set to invisible !');
       app.client.user.setStatus('invisible');
     }

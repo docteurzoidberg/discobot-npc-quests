@@ -26,7 +26,7 @@ COPY package* ./
 #prod node modules + run register commands
 RUN npm install --omit=dev \
 && npm install -g pino-pretty \
-npm run register
+&& NODE_ENV=prod npm run register
 
 # RUN
 CMD ["dumb-init", "npm", "start"]

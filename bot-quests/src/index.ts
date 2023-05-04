@@ -1,19 +1,26 @@
-//TODO: typescript imports
+//typescript imports
+import * as dotenv from 'dotenv';
+import * as fs from 'fs';
+
+import { default as logger } from './logger';
 
 //load environment variables
-require('dotenv').config({
+
+dotenv.config({
   path:
     __dirname +
     '/../.env' +
     (process.env.NODE_ENV ? '.' + process.env.NODE_ENV : ''),
 });
 
-const fs = require('fs');
 const basePath = __dirname;
 
-const logger = require('pino')({ level: process.env.LOG_LEVEL || 'debug' });
+//const logger = pino({
+//  level: process.env.LOG_LEVEL ? process.env.LOG_LEVEL : 'debug',
+//});
 
 import { Client, Collection, GatewayIntentBits, Partials } from 'discord.js';
+import { BotApplication } from './types/BotApplication';
 
 //parsing env variables
 const BOT_INVISIBLE = process.env.BOT_INVISIBLE === 'true';
@@ -60,12 +67,12 @@ try {
   fs.unlinkSync(testFile);
 } catch (err) {
   logger.fatal(`DATA_PATH ${DATA_PATH} is not writable`);
-  process.exit(-1);
+  process.exit(1);
 }
 
 //check if bot was updated
-let updated: boolean | undefined = undefined;
-let botVersion: string | undefined = undefined;
+let updated: boolean = false;
+let botVersion: string = '';
 const botVersionFile = `${DATA_PATH}/.version`;
 
 //check version file if exists
@@ -104,12 +111,11 @@ const client = new Client({
   },
 });
 
-const app = {
+const app: BotApplication = {
   client: client,
   logger: logger,
   commands: new Collection(),
   updated: updated,
-  invisible: BOT_INVISIBLE,
   version: BOT_VERSION,
   dataPath: DATA_PATH,
   config: {
@@ -144,6 +150,7 @@ for (const file of commandFiles) {
   // With the key as the command name and the value as the exported module
   app.commands.set(command.data.name, command);
 }
+//pwet
 
 //handle process signals
 async function closeGracefully(signal) {

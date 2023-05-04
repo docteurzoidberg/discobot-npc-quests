@@ -449,19 +449,31 @@ async function resetChannelDailyQuests(channelId) {
   //reset datecomplete to every daily quest from yesterday and before
 
   const dateNow = new Date();
-  db.quests.forEach((quest, index) => {
+  const resetedQuests = [];
+  db.quests.forEach((quest) => {
     if (!quest.daily) {
       return;
     }
     if (!quest.dateCompleted) {
       return;
     }
-    if (quest.dateCompleted < dateNow) {
+    //parse date
+    const dateCompletedDay = new Date(quest.dateCompleted);
+    dateCompletedDay.setHours(0, 0, 0, 0);
+
+    const dateNowDay = new Date(dateNow);
+    dateNowDay.setHours(0, 0, 0, 0);
+
+    //check if dateCompletedDay is expired (not same day as today)
+    if (dateCompletedDay.getTime() < dateNowDay.getTime()) {
+      //reset dateCompleted
       quest.dateCompleted = null;
-      db.quests[index] = quest;
+      //db.quests[index] = quest;
+      resetedQuests.push(quest);
     }
   });
   await _saveChannelDatabase(channelId, db);
+  return resetedQuests;
 }
 
 module.exports = {

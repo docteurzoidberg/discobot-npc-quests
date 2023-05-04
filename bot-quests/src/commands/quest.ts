@@ -1,3 +1,5 @@
+import { BotApplication } from '../types/BotApplication';
+
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { EmbedBuilder } = require('discord.js');
 
@@ -602,7 +604,7 @@ const _getUserName = async (app, interaction, userNameOrId) => {
   return userNameOrId;
 };
 
-const _getUserTag = async (app, interaction, userNameOrId) => {
+const _getUserTag = async (app: BotApplication, interaction, userNameOrId) => {
   const unknown = 'Utilisateur inconnu';
   if (!userNameOrId) {
     return unknown;
@@ -629,7 +631,11 @@ const _getUserTag = async (app, interaction, userNameOrId) => {
   return userNameOrId;
 };
 
-const _getUserNames = async (app, interaction, usersOrIds = []) => {
+const _getUserNames = async (
+  app: BotApplication,
+  interaction,
+  usersOrIds = []
+) => {
   const usernames = await amap(usersOrIds, async (userNameOrId) => {
     const userName = await _getUserName(app, interaction, userNameOrId);
     return userName;
@@ -637,7 +643,11 @@ const _getUserNames = async (app, interaction, usersOrIds = []) => {
   return usernames;
 };
 
-const _getUserTags = async (app, interaction, usersOrIds = []) => {
+const _getUserTags = async (
+  app: BotApplication,
+  interaction,
+  usersOrIds = []
+) => {
   const userTags = await amap(usersOrIds, async (userNameOrId) => {
     const userTag = await _getUserTag(app, interaction, userNameOrId);
     return userTag;
@@ -650,7 +660,11 @@ const _generateDallePrompt = (title) => {
   return prompt;
 };
 
-const _generateQuestEmbedShort = async (app, interaction, quest) => {
+const _generateQuestEmbedShort = async (
+  app: BotApplication,
+  interaction,
+  quest
+) => {
   let title = helpers.preventEmbed(quest.title) || '*Sans titre*';
   let description = quest.description || '*Aucune description*';
   let icon = quest.icon || '';
@@ -718,7 +732,7 @@ const _generateQuestEmbedShort = async (app, interaction, quest) => {
   return msgEmbed;
 };
 
-const _generateQuestEmbed = async (app, interaction, quest) => {
+const _generateQuestEmbed = async (app: BotApplication, interaction, quest) => {
   const emojiDaily = '📅';
   const emojiRepeat = '🔁';
   const emojiCompleted = '✅';
@@ -853,7 +867,7 @@ const _generateQuestEmbed = async (app, interaction, quest) => {
   return msgEmbed;
 };
 
-async function commandAdd(app, interaction) {
+async function commandAdd(app: BotApplication, interaction) {
   const userName = app.client.users.cache.get(interaction.user.id).username; //TODO: check if user exists
   const userId = interaction.user.id;
   const channelId = interaction.channelId;
@@ -938,7 +952,7 @@ async function commandAdd(app, interaction) {
   }
 }
 
-async function commandUpdate(app, interaction) {
+async function commandUpdate(app: BotApplication, interaction) {
   const userName = app.client.users.cache.get(interaction.user.id).username;
   const channelName = interaction.channel.name;
   const channelId = interaction.channel.id;
@@ -1008,7 +1022,7 @@ async function commandUpdate(app, interaction) {
   }
 }
 
-async function commandShow(app, interaction, ephemeral = true) {
+async function commandShow(app: BotApplication, interaction, ephemeral = true) {
   const userName = app.client.users.cache.get(interaction.user.id).username;
   const channelName = interaction.channel.name;
   const channelId = interaction.channelId;
@@ -1052,7 +1066,7 @@ async function commandShow(app, interaction, ephemeral = true) {
   }
 }
 
-async function commandList(app, interaction) {
+async function commandList(app: BotApplication, interaction) {
   const userName = app.client.users.cache.get(interaction.user.id).username;
 
   let channelId = interaction.channelId;
@@ -1114,7 +1128,7 @@ async function commandList(app, interaction) {
   }
 }
 
-async function commandComplete(app, interaction) {
+async function commandComplete(app: BotApplication, interaction) {
   const userId = interaction.user.id;
   const userName = app.client.users.cache.get(interaction.user.id).username;
   const channelId = interaction.channelId;
@@ -1188,7 +1202,7 @@ async function commandComplete(app, interaction) {
   }
 }
 
-async function commandDelete(app, interaction) {
+async function commandDelete(app: BotApplication, interaction) {
   const userName = app.client.users.cache.get(interaction.user.id).username;
   const channelName = interaction.channel.name;
   const channelId = interaction.channelId;
@@ -1214,7 +1228,7 @@ async function commandDelete(app, interaction) {
   }
 }
 
-async function commandUncomplete(app, interaction) {
+async function commandUncomplete(app: BotApplication, interaction) {
   const userName = app.client.users.cache.get(interaction.user.id).username;
   const channelName = interaction.channel.name;
   const channelId = interaction.channelId;
@@ -1240,7 +1254,7 @@ async function commandUncomplete(app, interaction) {
   }
 }
 
-async function commandUndelete(app, interaction) {
+async function commandUndelete(app: BotApplication, interaction) {
   const userName = app.client.users.cache.get(interaction.user.id).username;
   const channelName = interaction.channel.name;
   const channelId = interaction.channelId;
@@ -1268,7 +1282,7 @@ async function commandUndelete(app, interaction) {
 
 /* Autocomplete Methods */
 
-async function autocompleteGetAllQuestIds(app, interaction) {
+async function autocompleteGetAllQuestIds(app: BotApplication, interaction) {
   const quests = await api.getChannelQuests(interaction.channel.id);
   //sort by most recent first
   quests.sort((a, b) => {
@@ -1277,7 +1291,10 @@ async function autocompleteGetAllQuestIds(app, interaction) {
   return quests.map((quest) => _formatAutocompleteQuest(quest));
 }
 
-async function autocompleteGetDeletableQuestIds(app, interaction) {
+async function autocompleteGetDeletableQuestIds(
+  app: BotApplication,
+  interaction
+) {
   const quests = await api.getChannelQuests(interaction.channel.id);
   //sort by most recent first
   quests.sort((a, b): number => {
@@ -1290,7 +1307,10 @@ async function autocompleteGetDeletableQuestIds(app, interaction) {
     .map((quest) => _formatAutocompleteQuest(quest));
 }
 
-async function autocompleteGetDeletedQuestIds(app, interaction) {
+async function autocompleteGetDeletedQuestIds(
+  app: BotApplication,
+  interaction
+) {
   const quests = await api.getChannelQuests(interaction.channel.id);
   //sort by most recent first
   quests.sort((a, b) => {
@@ -1301,7 +1321,10 @@ async function autocompleteGetDeletedQuestIds(app, interaction) {
     .map((quest) => _formatAutocompleteQuest(quest));
 }
 
-async function autocompleteGetCompletableQuestIds(app, interaction) {
+async function autocompleteGetCompletableQuestIds(
+  app: BotApplication,
+  interaction
+) {
   const quests = await api.getChannelQuests(interaction.channel.id);
   //sort by most recent first
   quests.sort((a, b) => {
@@ -1315,7 +1338,10 @@ async function autocompleteGetCompletableQuestIds(app, interaction) {
     .map((quest) => _formatAutocompleteQuest(quest));
 }
 
-async function autocompleteGetCompletedQuestIds(app, interaction) {
+async function autocompleteGetCompletedQuestIds(
+  app: BotApplication,
+  interaction
+) {
   const quests = await api.getChannelQuests(interaction.channel.id);
   //sort by most recent first
   quests.sort((a, b) => {
@@ -1327,7 +1353,10 @@ async function autocompleteGetCompletedQuestIds(app, interaction) {
 }
 
 //return all current interaction guild 's channels with at least one quest
-async function autocompleteGetAllChannelsWithQuests(app, interaction) {
+async function autocompleteGetAllChannelsWithQuests(
+  app: BotApplication,
+  interaction
+) {
   const channelsIdWithQuests = await api.getChannelsWithQuests();
   const channels = channelsIdWithQuests.map(async (channelId) => {
     const channel = app.client.channels.cache.get(channelId);
@@ -1340,7 +1369,7 @@ async function autocompleteGetAllChannelsWithQuests(app, interaction) {
 }
 
 //return all current interaction guild 's channels
-async function autocompleteGetAllChannels(app, interaction) {
+async function autocompleteGetAllChannels(app: BotApplication, interaction) {
   //get current interaction guild 's channels list
   const channels = app.client.channels.cache.filter(async (channel) => {
     //filter channels
@@ -1352,7 +1381,7 @@ async function autocompleteGetAllChannels(app, interaction) {
   return channels.map((channel) => _formatAutocompleteChannel(channel));
 }
 
-async function autocompleteGetAllUsers(app, interaction) {
+async function autocompleteGetAllUsers(app: BotApplication, interaction) {
   const users = app.client.users.cache;
   return users.map(async (user) => {
     //need fetch ?
@@ -1365,7 +1394,7 @@ async function autocompleteGetAllUsers(app, interaction) {
 
 /* Command Methods */
 
-async function commandSettingsAnnounceCreate(app, interaction) {
+async function commandSettingsAnnounceCreate(app: BotApplication, interaction) {
   const value = interaction.options.getBoolean('value');
   try {
     const settings = await api.getUserSettings(interaction.user.id);
@@ -1386,7 +1415,7 @@ async function commandSettingsAnnounceCreate(app, interaction) {
   }
 }
 
-async function commandSettingsAnnounceUpdate(app, interaction) {
+async function commandSettingsAnnounceUpdate(app: BotApplication, interaction) {
   const value = interaction.options.getBoolean('value');
   try {
     const settings = await api.getUserSettings(interaction.user.id);
@@ -1407,7 +1436,10 @@ async function commandSettingsAnnounceUpdate(app, interaction) {
   }
 }
 
-async function commandSettingsAnnounceComplete(app, interaction) {
+async function commandSettingsAnnounceComplete(
+  app: BotApplication,
+  interaction
+) {
   const value = interaction.options.getBoolean('value');
   try {
     const settings = await api.getUserSettings(interaction.user.id);
@@ -1428,7 +1460,10 @@ async function commandSettingsAnnounceComplete(app, interaction) {
   }
 }
 
-async function commandSettingsAnnounceUncomplete(app, interaction) {
+async function commandSettingsAnnounceUncomplete(
+  app: BotApplication,
+  interaction
+) {
   const value = interaction.options.getBoolean('value');
   try {
     const settings = await api.getUserSettings(interaction.user.id);
@@ -1451,7 +1486,7 @@ async function commandSettingsAnnounceUncomplete(app, interaction) {
   }
 }
 
-async function commandSettingsAnnounceDelete(app, interaction) {
+async function commandSettingsAnnounceDelete(app: BotApplication, interaction) {
   const value = interaction.options.getBoolean('value');
   try {
     const settings = await api.getUserSettings(interaction.user.id);
@@ -1472,7 +1507,10 @@ async function commandSettingsAnnounceDelete(app, interaction) {
   }
 }
 
-async function commandSettingsAnnounceUndelete(app, interaction) {
+async function commandSettingsAnnounceUndelete(
+  app: BotApplication,
+  interaction
+) {
   const value = interaction.options.getBoolean('value');
   try {
     const settings = await api.getUserSettings(interaction.user.id);
@@ -1493,7 +1531,7 @@ async function commandSettingsAnnounceUndelete(app, interaction) {
   }
 }
 
-async function commandSettingsPublicName(app, interaction) {
+async function commandSettingsPublicName(app: BotApplication, interaction) {
   const value = interaction.options.getString('value');
   try {
     const settings = await api.getUserSettings(interaction.user.id);
@@ -1512,7 +1550,7 @@ async function commandSettingsPublicName(app, interaction) {
   }
 }
 
-async function commandSettingsPublicAvatar(app, interaction) {
+async function commandSettingsPublicAvatar(app: BotApplication, interaction) {
   const value = interaction.options.getString('value');
   try {
     const settings = await api.getUserSettings(interaction.user.id);
@@ -1531,7 +1569,7 @@ async function commandSettingsPublicAvatar(app, interaction) {
   }
 }
 
-async function commandSettingsList(app, interaction) {
+async function commandSettingsList(app: BotApplication, interaction) {
   const userName = app.client.users.cache.get(interaction.user.id).username;
   try {
     app.logger.info(
@@ -1552,7 +1590,7 @@ async function commandSettingsList(app, interaction) {
   }
 }
 
-async function commandPlayerAdd(app, interaction) {
+async function commandPlayerAdd(app: BotApplication, interaction) {
   const userId = interaction.user.id;
   const channelId = interaction.channelId;
   const userName = app.client.users.cache.get(userId).username;
@@ -1580,7 +1618,7 @@ async function commandPlayerAdd(app, interaction) {
   }
 }
 
-async function commandPlayerRemove(app, interaction) {
+async function commandPlayerRemove(app: BotApplication, interaction) {
   const userId = interaction.user.id;
   const channelId = interaction.channelId;
   const userName = app.client.users.cache.get(userId).username;
@@ -1610,7 +1648,7 @@ async function commandPlayerRemove(app, interaction) {
   }
 }
 
-const commandTagAdd = async (app, interaction) => {
+const commandTagAdd = async (app: BotApplication, interaction) => {
   const userId = interaction.user.id;
   const channelId = interaction.channelId;
   const userName = app.client.users.cache.get(userId).username;
@@ -1634,7 +1672,7 @@ const commandTagAdd = async (app, interaction) => {
   }
 };
 
-const commandTagRemove = async (app, interaction) => {
+const commandTagRemove = async (app: BotApplication, interaction) => {
   const userId = interaction.user.id;
   const channelId = interaction.channelId;
   const userName = app.client.users.cache.get(userId).username;
@@ -1659,7 +1697,7 @@ const commandTagRemove = async (app, interaction) => {
   }
 };
 
-const commandTagList = async (app, interaction) => {
+const commandTagList = async (app: BotApplication, interaction) => {
   const userId = interaction.user.id;
   const channelId = interaction.channelId;
   const userName = app.client.users.cache.get(userId).username;
@@ -1688,7 +1726,7 @@ const commandTagList = async (app, interaction) => {
 
 module.exports = {
   data: commands,
-  async execute(app, interaction) {
+  async execute(app: BotApplication, interaction) {
     const subcommand = interaction.options.getSubcommand();
     const commandgroup = interaction.options.getSubcommandGroup();
     app.logger.debug(
@@ -1789,7 +1827,7 @@ module.exports = {
         return;
     }
   },
-  async autocomplete(app, interaction) {
+  async autocomplete(app: BotApplication, interaction) {
     const focusedOption = interaction.options.getFocused(true);
     const subcommand = interaction.options.getSubcommand();
     let choices = [];

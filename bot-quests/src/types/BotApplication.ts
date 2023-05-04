@@ -1,14 +1,14 @@
-import { Client, Collection } from 'discord.js';
+import { Collection } from 'discord.js';
 import { BotCommand } from './BotCommand';
+import { BotConfig } from './BotConfig';
+import { Logger } from 'pino';
 
 export interface BotApplication {
-  client: Client;
+  client: any;
+  logger: Logger;
   commands: Collection<string, BotCommand>;
-  logger: any;
   updated: boolean;
-  invisible: boolean;
   version: string;
   dataPath: string;
-  db: any;
-  config: any;
+  config: BotConfig;
 }

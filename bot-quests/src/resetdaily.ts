@@ -1,12 +1,14 @@
-require('dotenv').config({
+import dotenv from 'dotenv';
+
+dotenv.config({
   path:
     __dirname +
     '/../.env' +
     (process.env.NODE_ENV ? '.' + process.env.NODE_ENV : ''),
 });
 
-const logger = require('pino')({ level: process.env.LOG_LEVEL || 'debug' });
-const api = require('./lib/quests-api');
+import { default as logger } from './logger';
+import * as api from './lib/quests-api';
 
 //parsing env variables
 const API_URL = process.env.API_URL || false;
@@ -25,7 +27,8 @@ const main = async () => {
     logger.info(`Reseting daily quests for channel ${channelId}`);
     try {
       const result = await api.resetDailyQuestsInChannel(channelId);
-      logger.info(`Result: ${result}`);
+      logger.info(`Result:`);
+      logger.info(result);
     } catch (err) {
       logger.error(
         `Error reseting daily quests for channel ${channelId}: ${err}`
