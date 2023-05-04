@@ -1330,12 +1330,25 @@ async function autocompleteGetCompletableQuestIds(
   quests.sort((a, b) => {
     return getTime(b.dateCreated) - getTime(a.dateCreated);
   });
+
+  //function to check if daily quest is obsolete (more than 1 day old)
+  const isCompletedDailyQuestObsolete = (quest) => {
+    if (!quest.daily) return false;
+    if (!quest.dateCompleted) return false;
+    const dateCompleted = new Date(quest.dateCompleted);
+    const dateCompletedDay = dateCompleted.getDate();
+    const dateNow = new Date();
+    const dateNowDay = dateNow.getDate();
+    return dateNowDay - dateCompletedDay > 0;
+  };
+
   return quests
     .filter(
       (quest) =>
         quest.dateCompleted === undefined ||
         quest.dateCompleted === null ||
-        quest.repeat
+        quest.repeat ||
+        isCompletedDailyQuestObsolete(quest)
     )
     .map((quest) => _formatAutocompleteQuest(quest));
 }
