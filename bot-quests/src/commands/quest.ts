@@ -1333,7 +1333,9 @@ async function autocompleteGetCompletableQuestIds(
   return quests
     .filter(
       (quest) =>
-        quest.dateCompleted === undefined || quest.dateCompleted === null
+        quest.dateCompleted === undefined ||
+        quest.dateCompleted === null ||
+        quest.repeat
     )
     .map((quest) => _formatAutocompleteQuest(quest));
 }
