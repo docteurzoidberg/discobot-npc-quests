@@ -9,7 +9,6 @@ RUN npm install \
 
 FROM node:18-alpine3.16 AS cronrunner
 
-ENV NODE_ENV production
 ENV LANG C.UTF-8
 ENV EDITOR nano
 
@@ -22,6 +21,8 @@ WORKDIR /app
 COPY --from=builder ./app/dist ./dist
 COPY package* ./
 
+#prod node modules + run register commands
+RUN npm install --omit=dev
 
 RUN mkdir /app/bin \
 && touch /app/bin/resetdaily.sh \
