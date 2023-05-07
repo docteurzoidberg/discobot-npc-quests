@@ -20,21 +20,13 @@ if (!API_URL) {
 }
 
 const main = async () => {
-  const channelIds = await api.getChannelsWithQuests();
-  logger.info(`Found ${channelIds.length} channels with quests`);
-
-  for (const channelId of channelIds) {
-    logger.info(`Reseting daily quests for channel ${channelId}`);
-    try {
-      const result = await api.resetDailyQuestsInChannel(channelId);
-      logger.info(`Result:`);
-      logger.info(result);
-    } catch (err) {
-      logger.error(
-        `Error reseting daily quests for channel ${channelId}: ${err}`
-      );
-      logger.debug(err.stack);
-    }
+  try {
+    const result = await api.resetDailyQuests();
+    logger.info(`Result:`);
+    logger.info(result);
+  } catch (err) {
+    logger.error(`Error reseting daily quests: ${err}`);
+    logger.debug(err.stack);
   }
 };
 

@@ -10,6 +10,17 @@ dotenv.config({
 
 const API_URL = process.env.API_URL || false;
 
+export async function resetDailyQuests() {
+  const response = await fetch(`${API_URL}/quests/reset`, {
+    method: 'POST',
+  });
+  if (response.ok) {
+    return await response.json();
+  } else {
+    throw new Error(`API error: ${response.status} ${response.statusText}`);
+  }
+}
+
 export async function resetDailyQuestsInChannel(channelId) {
   const response = await fetch(`${API_URL}/quests/${channelId}/reset`, {
     method: 'POST',

@@ -3,6 +3,8 @@ import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 
 import { default as logger } from './logger';
+import * as schedule from 'node-schedule';
+import * as api from './lib/quests-api';
 
 //load environment variables
 
@@ -98,6 +100,19 @@ if (botVersion !== BOT_VERSION) {
   }
 }
 
+//reset daily quest job
+const job = schedule.scheduleJob('0 0 * * *', () => {
+  logger.info('Resetting daily quests');
+  try {
+    api.resetDailyQuests();
+  } catch (err) {
+    logger.error(`Error reseting daily quests: ${err}`);
+    logger.debug(err.stack);
+  }
+});
+
+job.invoke();
+
 //prepare instance of Discord.js client
 const client = new Client({
   intents: [
@@ -155,7 +170,8 @@ for (const file of commandFiles) {
 //handle process signals
 async function closeGracefully(signal) {
   logger.warn(`Received signal to terminate: ${signal}, closing`);
-  client.destroy();
+  await client.destroy();
+  await schedule.gracefulShutdown();
   process.exit(0);
 }
 process.on('SIGINT', closeGracefully);

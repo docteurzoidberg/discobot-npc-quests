@@ -37,7 +37,7 @@ const _checkChannelDatabase = (db) => {
 const _checkChannelId = (channelId) => {
   if (!channelId) throw new Error('No channelId provided');
   if (!channelId.match(/^[0-9]+$/))
-    throw new Error('Invalid channelId provided');
+    throw new Error('Invalid channelId provided: ' + channelId);
 };
 
 const _checkQuestId = (questId) => {
@@ -440,6 +440,17 @@ async function uncompleteChannelQuest(channelId, questId) {
   return quest;
 }
 
+async function resetDailyQuests() {
+  const channels = await getChannelsIds();
+  const quests = [];
+  for (let i = 0; i < channels.length; i++) {
+    const channel = channels[i];
+    const channelQuestsReseted = await resetChannelDailyQuests(channel);
+    quests.push(...channelQuestsReseted);
+  }
+  return quests;
+}
+
 async function resetChannelDailyQuests(channelId) {
   _checkChannelId(channelId);
   const db = await _loadChannelDatabase(channelId);
@@ -490,6 +501,7 @@ module.exports = {
   addTagToChannelQuest,
   removeTagFromChannelQuest,
   resetChannelDailyQuests,
+  resetDailyQuests,
   addPlayerToQuest,
   removePlayerFromQuest,
 };
