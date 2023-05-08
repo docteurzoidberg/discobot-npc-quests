@@ -9,6 +9,7 @@
     "start": "node ./dist/index.js",
     "register": "node ./dist/register.js",
     "resetdaily": "node ./dist/resetdaily.js",
+    "deletecommands": "node ./dist/deletecommands.js",
     "testdalle": "node ./dist/testdalle.js"
   },
   "author": "DrZoid",
