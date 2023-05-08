@@ -25,9 +25,9 @@ services:
     tty: true
     build:
       context: ./bot-quests
-      dockerfile: Dockerfile.bot
+      dockerfile: Dockerfile
     env_file:
-      - ./bot-achievements/.env.dev
+      - ./bot-achievements/.env.production
     environment:
       #overide api url in env file to use the docker container
       - API_URL=http://npc-quests-api:5000/quest
