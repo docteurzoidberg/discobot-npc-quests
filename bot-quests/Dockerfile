@@ -8,13 +8,11 @@ WORKDIR /app
 COPY . .
 
 RUN npm install \
-&& npm install typescript -g \
 && npm run build \
 && rm -rf node_modules
 
 #prod node modules + run register commands
-RUN npm install --omit=dev \
-&& npm install -g pino-pretty
+RUN npm install --omit=dev
 
 FROM builder AS register
 

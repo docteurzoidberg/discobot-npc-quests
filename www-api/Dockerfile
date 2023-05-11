@@ -18,8 +18,7 @@ WORKDIR /app
 # First dependencies. for cache
 COPY package*.json ./
 
-RUN npm install --omit=dev        
-RUN npm install -g pino-pretty
+RUN npm install --omit=dev
 
 # Then app source
 COPY . .
