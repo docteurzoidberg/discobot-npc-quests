@@ -7,12 +7,12 @@ WORKDIR /app
 
 COPY . .
 
-RUN npm install \
+RUN npm ci \
 && npm run build \
 && rm -rf node_modules
 
 #prod node modules + run register commands
-RUN npm install --omit=dev
+RUN npm ci --omit=dev
 
 FROM builder AS register
 
@@ -28,8 +28,6 @@ ENV BOT_TOKEN=$BOT_TOKEN
 
 WORKDIR /app
 
-COPY --from=builder . .
-
 RUN npm run register
 
 FROM builder AS runner
@@ -41,7 +39,6 @@ RUN mkdir /data
 
 # APP dir
 WORKDIR /app
-COPY --from=register . .
 
 # RUN
 CMD ["dumb-init", "npm", "start"]

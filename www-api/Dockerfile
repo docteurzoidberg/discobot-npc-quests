@@ -18,7 +18,7 @@ WORKDIR /app
 # First dependencies. for cache
 COPY package*.json ./
 
-RUN npm install --omit=dev
+RUN npm ci --omit=dev
 
 # Then app source
 COPY . .
