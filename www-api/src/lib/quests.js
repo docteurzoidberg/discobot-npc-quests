@@ -1,4 +1,6 @@
-require('dotenv').config();
+require('dotenv').config({
+  path: '../../.env' + (process.env.NODE_ENV ? '.' + process.env.NODE_ENV : ''),
+});
 
 const fs = require('fs');
 
@@ -65,15 +67,6 @@ const _checkTagObject = (tagObject) => {
   if (!tagObject.tag) throw new Error('No tagObject.tag provided');
   _checkTag(tagObject.tag);
 };
-
-function _uuid() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let result = '';
-  for (let i = 0; i < 3; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
 
 function _generateID(index) {
   let numChars = 2; // number of characters in ID
@@ -270,6 +263,54 @@ async function updateChannelQuest(channelId, questId, questObject) {
   db.quests[found] = questUpdated;
   await _saveChannelDatabase(channelId, db);
   return questUpdated;
+}
+
+async function startChannelQuest(channelId, questId, userId) {
+  _checkChannelId(channelId);
+  _checkQuestId(questId);
+  _checkUserId(userId);
+  const db = await _loadChannelDatabase(channelId);
+  _checkChannelDatabase(db);
+  let found = null;
+  db.quests.forEach((element) => {
+    if (element.id.toLowerCase() === questId.toLowerCase()) {
+      found = element;
+    }
+  });
+  if (!found) {
+    throw new Error(`Error starting quest: ${questId} not found`);
+  }
+  if (found.startedBy) {
+    throw new Error(`Error starting quest: ${questId} already started`);
+  }
+  found.startedBy = userId;
+  found.dateStarted = new Date();
+  await _saveChannelDatabase(channelId, db);
+  return found;
+}
+
+async function stopChannelQuest(channelId, questId, userId) {
+  _checkChannelId(channelId);
+  _checkQuestId(questId);
+  _checkUserId(userId);
+  const db = await _loadChannelDatabase(channelId);
+  _checkChannelDatabase(db);
+  let found = null;
+  db.quests.forEach((element) => {
+    if (element.id.toLowerCase() === questId.toLowerCase()) {
+      found = element;
+    }
+  });
+  if (!found) {
+    throw new Error(`Error stopping quest: ${questId} not found`);
+  }
+  if (!found.startedBy) {
+    throw new Error(`Error stopping quest: ${questId} not started`);
+  }
+  found.startedBy = null;
+  found.dateStarted = null;
+  await _saveChannelDatabase(channelId, db);
+  return found;
 }
 
 async function completeChannelQuest(channelId, questId, userId) {
@@ -494,6 +535,8 @@ module.exports = {
   getChannelPublicQuests,
   addChannelQuest,
   updateChannelQuest,
+  startChannelQuest,
+  stopChannelQuest,
   completeChannelQuest,
   uncompleteChannelQuest,
   deleteChannelQuest,

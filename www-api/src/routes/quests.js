@@ -6,6 +6,8 @@
   addChannelQuest
   updateChannelQuest
   deleteChannelQuest
+  +startChannelQuest
+  +stopChannelQuest
   completeChannelQuest
   uncompleteChannelQuest
   undeleteChannelQuest
@@ -45,6 +47,18 @@ const updateChannelQuest = async (req, res) => {
 const deleteChannelQuest = async (req, res) => {
   const { channelId, questId } = req.params;
   const quest = await questsdb.deleteChannelQuest(channelId, questId);
+  res.json(quest);
+};
+
+const startChannelQuest = async (req, res) => {
+  const { channelId, questId, userId } = req.params;
+  const quest = await questsdb.startChannelQuest(channelId, questId, userId);
+  res.json(quest);
+};
+
+const stopChannelQuest = async (req, res) => {
+  const { channelId, questId, userId } = req.params;
+  const quest = await questsdb.stopChannelQuest(channelId, questId, userId);
   res.json(quest);
 };
 
@@ -137,6 +151,9 @@ router.delete(
   '/:channelId/:questId/removeplayer/:userId',
   removePlayerFromQuest
 );
+
+router.put('/:channelId/:questId/start/:userId', startChannelQuest);
+router.put('/:channelId/:questId/stop/:userId', stopChannelQuest);
 
 router.put('/:channelId/:questId/complete/:userId', completeChannelQuest);
 router.put('/:channelId/:questId/uncomplete', uncompleteChannelQuest);
