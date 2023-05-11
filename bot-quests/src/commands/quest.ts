@@ -727,25 +727,29 @@ const _generateQuestEmbedShort = async (
     quest.dateCreated && quest.createdBy ? quest.createdBy : false;
   const completedByUser =
     quest.dateCompleted && quest.completedBy ? quest.completedBy : false;
+  const startedbyUser =
+    quest.dateStarted && quest.startedBy ? quest.startedBy : false;
 
-  const color = quest.dateCompleted ? 0x00ff00 : helpers.colorFromId(quest.id);
-  const footerUser = completedByUser
-    ? await _getUserName(app, interaction, completedByUser)
-    : await _getUserName(app, interaction, createdByUser);
+  //completed = green, started = blue, other = color from id
+  const color = quest.dateCompleted ? 0x00ff00 : quest.dateStarted ? 0x0000ff : helpers.colorFromId(quest.id);
 
-  console.log('footerUser', footerUser);
+  //completed or stared or created by user
+  const footerUser =
+    completedByUser ? await _getUserName(app, interaction, completedByUser)
+      : startedbyUser ? await _getUserName(app, interaction, startedbyUser)
+        : await _getUserName(app, interaction, createdByUser);
 
   const footerStatus =
-    quest.dateCompleted && completedByUser ? '✅ accompli par' : '⭐ créée par';
+    (quest.dateCompleted && completedByUser) ? '✅ accompli par' :
+      (quest.dateStarted && startedbyUser) ? '🔥 commencé par' :
+        '⭐ créée par';
+
   const footerOptions = options.join(' ') + '\n';
 
   const descriptionPlayerEmoji = players.length > 1 ? '👥' : '👤';
-
   const userTags = await _getUserTags(app, interaction, players);
-  console.log('userTags', userTags);
-
   const descriptionPlayers = userTags.join(', ');
-  console.log('descriptionPlayers', descriptionPlayers);
+
 
   description = `${description}\n\n${descriptionPlayerEmoji} ${descriptionPlayers}`;
   const footerPlayers = '';
@@ -760,7 +764,7 @@ const _generateQuestEmbedShort = async (
   const timestamp =
     quest.dateCompleted != null
       ? helpers.parseDate(quest.dateCompleted)
-      : helpers.parseDate(quest.dateCreated);
+      : (quest.dateStarted ? helpers.parseDate(quest.dateStarted) : helpers.parseDate(quest.dateCreated));
 
   const msgEmbed = new EmbedBuilder()
     .setTitle(`[${title}]`)
@@ -782,23 +786,25 @@ const _generateQuestEmbed = async (app: BotApplication, interaction, quest) => {
   const emojiDaily = '📅';
   const emojiRepeat = '🔁';
   const emojiCompleted = '✅';
+  const emojiStarted = '🔥';
   const emojiCreated = '✎';
   const emojiGive = '🎁';
   const emojiPrivate = '🔒';
   const emojiGroup = '👥';
 
   let title = helpers.preventEmbed(quest.title) || '*Sans titre*';
-  let description =
-    helpers.preventEmbed(quest.description) || '*Aucune description*';
+  let description = helpers.preventEmbed(quest.description) || '*Aucune description*';
   let image = quest.image || '';
   let icon = quest.icon || '';
   let give = quest.give || '';
   let players = await _getUserTags(app, interaction, quest.players || []);
 
-  const color = quest.dateCompleted ? 0x00ff00 : helpers.colorFromId(quest.id);
+  //completed = green, started = blue, other = color from id
+  const color = quest.dateCompleted ? 0x00ff00 : quest.dateStarted ? 0x0000ff : helpers.colorFromId(quest.id);
 
   const createdBy = quest.createdBy || '';
   const completedBy = quest.completedBy || '';
+  const startedBy = quest.startedBy || '';
 
   let createdByUser = false;
   if (createdBy !== '') {
@@ -812,25 +818,37 @@ const _generateQuestEmbed = async (app: BotApplication, interaction, quest) => {
     completedByUser = completedBy;
   }
 
+  let startedByUser = false;
+  if (startedBy !== '') {
+    startedByUser = startedBy;
+  }
+
+
   //TODO: utiliser createdBy / completedBy
   const footerUser =
     quest.dateCompleted && completedByUser
       ? await _getUserName(app, interaction, completedByUser)
-      : await _getUserName(app, interaction, createdByUser);
+      : quest.dateStarted && startedByUser
+        ? await _getUserName(app, interaction, startedByUser)
+        : await _getUserName(app, interaction, createdByUser);
 
   const footerStatus =
     quest.dateCompleted && completedByUser
       ? `${emojiCompleted} Accompli par`
-      : `${emojiCreated} Crée par`;
+      : quest.dateStarted && startedByUser
+        ? `${emojiStarted} Commencé par`
+        : `${emojiCreated} Crée par`;
 
   const footerPrivate = quest.private ? ' ' + emojiPrivate : '';
 
   const footer = `${footerStatus} ${footerUser}${footerPrivate}`;
 
   const timestamp =
-    quest.dateCompleted != null
+    quest.dateCompleted
       ? helpers.parseDate(quest.dateCompleted)
-      : helpers.parseDate(quest.dateCreated);
+      : quest.dateStarted
+        ? helpers.parseDate(quest.dateStarted)
+        : helpers.parseDate(quest.dateCreated);
 
   const msgEmbed = new EmbedBuilder()
     .setTitle(`[${title}]`)
@@ -843,34 +861,33 @@ const _generateQuestEmbed = async (app: BotApplication, interaction, quest) => {
     .setTimestamp(timestamp);
 
   let descriptionMsg = `**Description**\n${description}`;
-  /*
-  if (quest.dateCreated && createdByUser) {
-    descriptionMsg += `\n\n**Crée** le ${helpers.formatEmbedFieldDate(
-      quest.dateCompleted
-    )} par ${_getUserTag(app, completedByUser)}`;
-  }
-  if (quest.dateCompleted && completedByUser) {
-    descriptionMsg += `\n\n**Accomplie** le ${helpers.formatEmbedFieldDate(
-      quest.dateCompleted
-    )} par ${_getUserTag(app, completedByUser)}`;
-  }
-*/
+
   if (quest.dateCreated && createdByUser) {
     const userTag = await _getUserTag(app, interaction, createdByUser);
-    console.log('userTag', userTag);
+    //console.log('userTag', userTag);
     msgEmbed.addFields({
       name: 'Créée',
-      value: `${helpers.formatEmbedFieldDate(quest.dateCreated)} ${userTag}`,
+      value: `${helpers.formatEmbedFieldDate(quest.dateCreated)} par ${userTag}`,
       inline: false,
     });
   }
 
   if (quest.dateCompleted && completedByUser) {
     const userTag = await _getUserTag(app, interaction, completedByUser);
-    console.log('userTag', userTag);
+    //console.log('userTag', userTag);
     msgEmbed.addFields({
       name: 'Accomplie',
-      value: `${helpers.formatEmbedFieldDate(quest.dateCompleted)} ${userTag}`,
+      value: `${helpers.formatEmbedFieldDate(quest.dateCompleted)} par ${userTag}`,
+      inline: false,
+    });
+  }
+
+  if (quest.dateStarted && startedByUser) {
+    const userTag = await _getUserTag(app, interaction, startedByUser);
+    //console.log('userTag', userTag);
+    msgEmbed.addFields({
+      name: 'Commencée',
+      value: `${helpers.formatEmbedFieldDate(quest.dateStarted)} ${userTag}`,
       inline: false,
     });
   }
@@ -885,7 +902,7 @@ const _generateQuestEmbed = async (app: BotApplication, interaction, quest) => {
   }
 
   const questOptions: Array<string> = [];
-  if (quest.daily) questOptions.push(`${emojiDaily} Quête quotidienne`);
+  if (quest.daily) questOptions.push(`${emojiDaily} Quête journalière`);
   if (quest.private) questOptions.push(`${emojiPrivate} Quête privée`);
   if (quest.repeat) questOptions.push(`${emojiRepeat} Quête répétable`);
   if (players.length > 1) questOptions.push(`${emojiGroup} Quête de groupe`);
@@ -903,10 +920,10 @@ const _generateQuestEmbed = async (app: BotApplication, interaction, quest) => {
     msgEmbed.setImage(embedImage);
   }
 
-  const embedIcon = icon !== '' ? icon : '';
-  if (embedIcon !== '') {
-    msgEmbed.setThumbnail(embedIcon);
-  }
+  //const embedIcon = icon !== '' ? icon : '';
+  //if (embedIcon !== '') {
+  //  msgEmbed.setThumbnail(embedIcon);
+  //}
 
   msgEmbed.setDescription(descriptionMsg);
   app.logger.debug(msgEmbed);
@@ -1068,31 +1085,38 @@ async function commandUpdate(app: BotApplication, interaction) {
 
 async function commandShow(app: BotApplication, interaction, ephemeral = true) {
   const userName = app.client.users.cache.get(interaction.user.id).username;
-  const channelName = interaction.channel.name;
-  const channelId = interaction.channelId;
+  //const channelName = interaction.channel.name;
   const id = interaction.options.getString('id');
+  //const channelId = interaction.options.getChannel('channel') || interaction.channelId;
   const full = interaction.options.getBoolean('full') || false;
   const short = !full;
+
+  const channel = interaction.options.getChannel('channel') || false;
+
+  let channelId = interaction.channelId;
+  let channelName = interaction.channel.name;
+
+  if (channel !== false) {
+    channelId = channel.id;
+    channelName = channel.name;
+  }
+
+  const inChannelMsg = ` (de ${helpers.formatChannelName(channelName)})`;
+  const inChannelTagMsg = ` (de ${channel.toString()})`;
+
   try {
     app.logger.info(
-      `Affichage de la quête [${id}] dans ${helpers.formatChannelName(
-        channelName
+      `Affichage de la quête [${id}]${inChannelMsg} dans ${helpers.formatChannelName(
+        interaction.channel.name
       )} par ${helpers.formatUsername(userName)} ` +
       (ephemeral === true ? '(en privé)' : '(en public)')
     );
     const quest = await api.getChannelQuestById(channelId, id);
 
-    //replace users ids by names
-    //quest.players = _getUserNames(app, quest.players || []);
-    //if (quest.createdBy)
-    //  quest.createdBy = _getUserName(app, quest.createdBy);
-    //if (quest.completedBy)
-    //  quest.completedBy = _getUserName(app, quest.completedBy);
-
     app.logger.debug(quest);
     const msg = short
       ? ''
-      : `${interaction.member} souhaite vous montrer cette quête:`;
+      : `${interaction.member} souhaite vous montrer cette quête${inChannelTagMsg}:`;
     const embed = short
       ? await _generateQuestEmbedShort(app, interaction, quest)
       : await _generateQuestEmbed(app, interaction, quest);
@@ -1111,7 +1135,10 @@ async function commandShow(app: BotApplication, interaction, ephemeral = true) {
 }
 
 async function commandList(app: BotApplication, interaction) {
+
   const userName = app.client.users.cache.get(interaction.user.id).username;
+
+  const channel = interaction.options.getChannel('channel') || false;
 
   let channelId = interaction.channelId;
   let channelName = interaction.channel.name;
@@ -1119,7 +1146,7 @@ async function commandList(app: BotApplication, interaction) {
   //options
   const byuser = interaction.options.getString('user') || false;
   const bytag = interaction.options.getString('tag') || false;
-  const bychannel = interaction.options.getString('channel') || false;
+  const bychannel = channel ? channel.id : false;
   const show = interaction.options.getBoolean('show') || false;
 
   const ephemeral = show === true ? false : true;
@@ -1244,7 +1271,6 @@ async function commandStart(app: BotApplication, interaction) {
     app.logger.debug(error.stack);
   }
 }
-
 
 async function commandStop(app: BotApplication, interaction) {
   const userId = interaction.user.id;
@@ -1490,7 +1516,8 @@ async function autocompleteGetStartableQuestIds(
   app: BotApplication,
   interaction
 ) {
-  const quests = await api.getChannelQuests(interaction.channel.id);
+  const channel = interaction.options.getChannel('channel') || interaction.channel;
+  const quests = await api.getChannelQuests(channel.id);
   //sort by most recent first
   quests.sort((a, b) => {
     return getTime(b.dateCreated) - getTime(a.dateCreated);
@@ -1502,7 +1529,6 @@ async function autocompleteGetStartableQuestIds(
       (quest.dateCompleted === null || quest.dateCompleted === undefined))
     .map((quest) => _formatAutocompleteQuest(quest));
 }
-
 
 async function autocompleteGetStoppableQuestIds(
   app: BotApplication,
@@ -1525,7 +1551,8 @@ async function autocompleteGetDeletableQuestIds(
   app: BotApplication,
   interaction
 ) {
-  const quests = await api.getChannelQuests(interaction.channel.id);
+  const channel = interaction.channel;
+  const quests = await api.getChannelQuests(channel.id);
   //sort by most recent first
   quests.sort((a, b): number => {
     return getTime(b.dateCreated) - getTime(a.dateCreated);
@@ -1541,7 +1568,8 @@ async function autocompleteGetDeletedQuestIds(
   app: BotApplication,
   interaction
 ) {
-  const quests = await api.getChannelQuests(interaction.channel.id);
+  const channel = interaction.channel;
+  const quests = await api.getChannelQuests(channel.id);
   //sort by most recent first
   quests.sort((a, b) => {
     return getTime(b.dateCreated) - getTime(a.dateCreated);
@@ -1555,7 +1583,8 @@ async function autocompleteGetCompletableQuestIds(
   app: BotApplication,
   interaction
 ) {
-  const quests = await api.getChannelQuests(interaction.channel.id);
+  const channel = interaction.channel;
+  const quests = await api.getChannelQuests(channel.id);
   //sort by most recent first
   quests.sort((a, b) => {
     return getTime(b.dateCreated) - getTime(a.dateCreated);
@@ -1590,7 +1619,8 @@ async function autocompleteGetCompletedQuestIds(
   app: BotApplication,
   interaction
 ) {
-  const quests = await api.getChannelQuests(interaction.channel.id);
+  const channel = interaction.channel;
+  const quests = await api.getChannelQuests(channel.id);
   //sort by most recent first
   quests.sort((a, b) => {
     return getTime(b.dateCreated) - getTime(a.dateCreated);
@@ -2069,6 +2099,10 @@ module.exports = {
             return await commandSettingsAnnounceCreate(app, interaction);
           case 'announce_update':
             return await commandSettingsAnnounceUpdate(app, interaction);
+          case 'announce_start':
+            return await commandSettingsAnnounceStart(app, interaction);
+          case 'announce_stop':
+            return await commandSettingsAnnounceStop(app, interaction);
           case 'announce_complete':
             return await commandSettingsAnnounceComplete(app, interaction);
           case 'announce_delete':
@@ -2113,6 +2147,8 @@ module.exports = {
         } else if (subcommand === 'stop') {
           choices = await autocompleteGetStoppableQuestIds(app, interaction);
         } else if (subcommand === 'delete') {
+          choices = await autocompleteGetDeletableQuestIds(app, interaction);
+        } else {
           choices = await autocompleteGetDeletableQuestIds(app, interaction);
         }
         break;

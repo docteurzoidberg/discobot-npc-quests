@@ -70,7 +70,7 @@ export const formatDateShort = (date: any): string => {
 };
 
 export const formatEmbedFieldDate = (date): string => {
-  return `📅 ${formatDateShort(parseDate(date))}`;
+  return `${formatDateShort(parseDate(date))}`;
 };
 
 export const formatChannelName = (name: string): string => {
