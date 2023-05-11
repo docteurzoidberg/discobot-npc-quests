@@ -115,6 +115,40 @@ export async function updateChannelQuest(channelId, questId, quest) {
   }
 }
 
+export async function startChannelQuest(channelId, questId, userId) {
+  const response = await fetch(
+    `${API_URL}/quests/${channelId}/${questId}/start/${userId}`,
+    {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+  if (response.ok) {
+    return await response.json();
+  } else {
+    throw new Error(`API error: ${response.status} ${response.statusText}`);
+  }
+}
+
+export async function stopChannelQuest(channelId, questId, userId) {
+  const response = await fetch(
+    `${API_URL}/quests/${channelId}/${questId}/stop/${userId}`,
+    {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+  if (response.ok) {
+    return await response.json();
+  } else {
+    throw new Error(`API error: ${response.status} ${response.statusText}`);
+  }
+}
+
 export async function completeChannelQuest(channelId, questId, userId) {
   const response = await fetch(
     `${API_URL}/quests/${channelId}/${questId}/complete/${userId}`,

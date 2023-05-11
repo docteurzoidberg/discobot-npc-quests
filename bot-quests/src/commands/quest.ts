@@ -178,14 +178,13 @@ const commands = new SlashCommandBuilder()
           .setRequired(false)
           .setAutocomplete(true)
       )
-      .addStringOption((option) =>
+      .addChannelOption((option) =>
         option
           .setName('channel')
           .setDescription(
             'Choisir un autre channel/thread que celui de la commande'
           )
           .setRequired(false)
-          .setAutocomplete(true)
       )
       .addBooleanOption((option) =>
         option
@@ -207,14 +206,13 @@ const commands = new SlashCommandBuilder()
           .setRequired(true)
           .setAutocomplete(true)
       )
-      .addStringOption((option) =>
+      .addChannelOption((option) =>
         option
           .setName('channel')
           .setDescription(
             'Choisir un autre channel/thread que celui de la commande'
           )
           .setRequired(false)
-          .setAutocomplete(true)
       )
       .addBooleanOption((option) =>
         option
@@ -235,14 +233,13 @@ const commands = new SlashCommandBuilder()
           .setRequired(true)
           .setAutocomplete(true)
       )
-      .addStringOption((option) =>
+      .addChannelOption((option) =>
         option
           .setName('channel')
           .setDescription(
             'Choisir un autre channel/thread que celui de la commande'
           )
           .setRequired(false)
-          .setAutocomplete(true)
       )
       .addBooleanOption((option) =>
         option
@@ -271,6 +268,34 @@ const commands = new SlashCommandBuilder()
     subcommand
       .setName('uncomplete')
       .setDescription("Annuler la fin d'une quête")
+      .addStringOption((option) =>
+        option
+          .setName('id')
+          .setDescription('ID de la quête')
+          .setRequired(true)
+          .setAutocomplete(true)
+      )
+  )
+
+  //start
+  .addSubcommand((subcommand) =>
+    subcommand
+      .setName('start')
+      .setDescription('Démarrer une quête')
+      .addStringOption((option) =>
+        option
+          .setName('id')
+          .setDescription('ID de la quête')
+          .setRequired(true)
+          .setAutocomplete(true)
+      )
+  )
+
+  //stop
+  .addSubcommand((subcommand) =>
+    subcommand
+      .setName('stop')
+      .setDescription('Arrêter une quête')
       .addStringOption((option) =>
         option
           .setName('id')
@@ -359,6 +384,26 @@ const commands = new SlashCommandBuilder()
           .setName('announce_update')
           .setDescription(
             "Active/désactive l'annonce de modification de quête publique"
+          )
+          .addBooleanOption((option) =>
+            option.setName('value').setDescription('Valeur')
+          )
+      )
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName('announce_start')
+          .setDescription(
+            "Active/désactive l'annonce de démarrage d'une quête publique"
+          )
+          .addBooleanOption((option) =>
+            option.setName('value').setDescription('Valeur')
+          )
+      )
+      .addSubcommand((subcommand) =>
+        subcommand
+          .setName('announce_stop')
+          .setDescription(
+            "Active/désactive l'annonce de fin/pause d'une quête publique"
           )
           .addBooleanOption((option) =>
             option.setName('value').setDescription('Valeur')
@@ -527,11 +572,13 @@ Public:
 const _formatSettings = (settings) => {
   const announceCreate = settings.ANNOUNCE_CREATE ? '✅' : '❌';
   const announceUpdate = settings.ANNOUNCE_UPDATE ? '✅' : '❌';
+  const announceStart = settings.ANNOUNCE_START ? '✅' : '❌';
+  const announceStop = settings.ANNOUNCE_STOP ? '✅' : '❌';
   const announceComplete = settings.ANNOUNCE_COMPLETE ? '✅' : '❌';
   const announceUncomplete = settings.ANNOUNCE_UNCOMPLETE ? '✅' : '❌';
   const announceDelete = settings.ANNOUNCE_DELETE ? '✅' : '❌';
   const announceUndelete = settings.ANNOUNCE_UNDELETE ? '✅' : '❌';
-  const announceSettingsText = `Annoncer:\n${announceCreate} **Création**\n${announceUpdate} **Modification**\n${announceComplete} **Validation**\n${announceUncomplete} **Annulation de validation**\n${announceDelete} **Suppression**\n${announceUndelete} **Annulation de suppression** `;
+  const announceSettingsText = `Annoncer:\n${announceCreate} **Création**\n${announceUpdate} **Modification**\n${announceStart} **Demarrage**\n${announceStop} **Arrêt**\n${announceComplete} **Validation**\n${announceUncomplete} **Annulation de validation**\n${announceDelete} **Suppression**\n${announceUndelete} **Annulation de suppression** `;
   const publicSettingsText = `Public:\n**Nom**: ${settings.PUBLIC_NAME}\n**Avatar**: ${settings.PUBLIC_AVATAR}`;
   return `${announceSettingsText}\n\n${publicSettingsText}`;
 };
@@ -552,11 +599,10 @@ const _formatAutocompleteQuest = (quest) => {
 
 const _formatAutocompleteChannel = (channel) => {
   return {
-    name: `#${
-      channel.name.length > 24
-        ? channel.name.substring(0, 21) + '...'
-        : channel.name
-    }}`,
+    name: `#${channel.name.length > 24
+      ? channel.name.substring(0, 21) + '...'
+      : channel.name
+      }}`,
     value: channel.id,
   };
 };
@@ -932,16 +978,14 @@ async function commandAdd(app: BotApplication, interaction) {
     app.logger.debug(newQuest);
     if (!deferred) {
       interaction.reply({
-        content: `Quête ${_formatQuestTitle(quest.title)} ajoutée ! (ID: ${
-          newQuest.id
-        })`,
+        content: `Quête ${_formatQuestTitle(quest.title)} ajoutée ! (ID: ${newQuest.id
+          })`,
         ephemeral: true,
       });
     } else {
       interaction.editReply({
-        content: `Quête ${_formatQuestTitle(quest.title)} ajoutée ! (ID: ${
-          newQuest.id
-        })`,
+        content: `Quête ${_formatQuestTitle(quest.title)} ajoutée ! (ID: ${newQuest.id
+          })`,
         ephemeral: true,
       });
     }
@@ -1034,7 +1078,7 @@ async function commandShow(app: BotApplication, interaction, ephemeral = true) {
       `Affichage de la quête [${id}] dans ${helpers.formatChannelName(
         channelName
       )} par ${helpers.formatUsername(userName)} ` +
-        (ephemeral === true ? '(en privé)' : '(en public)')
+      (ephemeral === true ? '(en privé)' : '(en public)')
     );
     const quest = await api.getChannelQuestById(channelId, id);
 
@@ -1123,6 +1167,157 @@ async function commandList(app: BotApplication, interaction) {
     });
   } catch (error) {
     app.logger.error('Erreur lors de la commande ' + 'list', error);
+    app.logger.debug(error.message);
+    app.logger.debug(error.stack);
+  }
+}
+
+async function commandStart(app: BotApplication, interaction) {
+  const userId = interaction.user.id;
+  const userName = app.client.users.cache.get(interaction.user.id).username;
+  const channelId = interaction.channelId;
+  const channelName = interaction.channel.name;
+  const questId = interaction.options.getString('id');
+  try {
+    app.logger.info(
+      `Démarrage de la quête [${questId}] demandée dans ${helpers.formatChannelName(
+        channelName
+      )} par ${helpers.formatUsername(userName)}`
+    );
+
+    //api call parralel
+    //const quest = await api.getChannelQuestById(channelId, questId);
+    //const userSettings = await api.getUserSettings(interaction.user.id);
+    const [quest, userSettings] = await Promise.all([
+      api.getChannelQuestById(channelId, questId),
+      api.getUserSettings(interaction.user.id),
+    ]);
+
+    //inconnu
+    if (quest === undefined) {
+      interaction.reply({
+        content: `Quête [${questId}] introuvable !`,
+        ephemeral: true,
+      });
+      return;
+    }
+
+    //déjà completee
+    if (quest.dateCompleted) {
+      interaction.reply({
+        content: `Quête [${questId}] déjà complétée !`,
+        ephemeral: true,
+      });
+      return;
+    }
+
+
+    const startedQuest = await api.startChannelQuest(
+      channelId,
+      questId,
+      userId
+    );
+    app.logger.debug(startedQuest);
+
+    const isPrivate = quest.private || userSettings.ANNOUNCE_COMPLETE === false;
+    if (isPrivate) {
+      //private -> reponse en privé
+      interaction.reply({
+        content: `Quête ${_formatQuestId(quest.id)} ${_formatQuestTitle(
+          startedQuest.title
+        )} démarée !`,
+        ephemeral: true,
+      });
+    } else {
+      //public -> reponse dans le channel ou a été lancé la commande
+      interaction.reply({
+        content: `${interaction.member} a démarré la quête:`,
+        embeds: [
+          await _generateQuestEmbedShort(app, interaction, startedQuest),
+        ],
+      });
+    }
+  }
+  catch (error) {
+    app.logger.error('Erreur lors de la commande start');
+    app.logger.debug(error.message);
+    app.logger.debug(error.stack);
+  }
+}
+
+
+async function commandStop(app: BotApplication, interaction) {
+  const userId = interaction.user.id;
+  const userName = app.client.users.cache.get(interaction.user.id).username;
+  const channelId = interaction.channelId;
+  const channelName = interaction.channel.name;
+  const questId = interaction.options.getString('id');
+  try {
+    app.logger.info(
+      `Arrêt de la quête [${questId}] demandée dans ${helpers.formatChannelName(
+        channelName
+      )} par ${helpers.formatUsername(userName)}`
+    );
+
+    //api call parralel
+    //const quest = await api.getChannelQuestById(channelId, questId);
+    //const userSettings = await api.getUserSettings(interaction.user.id);
+    const [quest, userSettings] = await Promise.all([
+      api.getChannelQuestById(channelId, questId),
+      api.getUserSettings(interaction.user.id),
+    ]);
+
+    //inconnu
+    if (quest === undefined) {
+      interaction.reply({
+        content: `Quête [${questId}] introuvable !`,
+        ephemeral: true,
+      });
+      return;
+    }
+
+    //déjà completee
+    if (quest.dateCompleted) {
+      interaction.reply({
+        content: `Quête [${questId}] déjà complétée !`,
+        ephemeral: true,
+      });
+      return;
+    }
+
+    //pas demarrée
+    if (!quest.dateStarted) {
+      interaction.reply({
+        content: `Quête [${questId}] non démarrée !`,
+        ephemeral: true,
+      });
+      return;
+    }
+
+    const stoppedQuest = await api.stopChannelQuest(channelId, questId);
+    app.logger.debug(stoppedQuest);
+
+    const isPrivate = quest.private || userSettings.ANNOUNCE_STOP === false;
+    if (isPrivate) {
+      //private -> reponse en privé
+      interaction.reply({
+        content: `Quête ${_formatQuestId(quest.id)} ${_formatQuestTitle(
+          stoppedQuest.title
+        )} arrêtée !`,
+        ephemeral: true,
+      });
+    } else {
+      //public -> reponse dans le channel ou a été lancé la commande
+      interaction.reply({
+        content: `${interaction.member} a arrêté la quête:`,
+        embeds: [
+          await _generateQuestEmbedShort(app, interaction, stoppedQuest),
+        ],
+      });
+    }
+  }
+  catch (error) {
+    app.logger.error('Erreur lors de la commande stop');
     app.logger.debug(error.message);
     app.logger.debug(error.stack);
   }
@@ -1291,6 +1486,41 @@ async function autocompleteGetAllQuestIds(app: BotApplication, interaction) {
   return quests.map((quest) => _formatAutocompleteQuest(quest));
 }
 
+async function autocompleteGetStartableQuestIds(
+  app: BotApplication,
+  interaction
+) {
+  const quests = await api.getChannelQuests(interaction.channel.id);
+  //sort by most recent first
+  quests.sort((a, b) => {
+    return getTime(b.dateCreated) - getTime(a.dateCreated);
+  });
+  return quests
+    .filter((quest) =>
+      (quest.dateDeleted === null || quest.dateDeleted === undefined) &&
+      (quest.dateStarted === null || quest.dateStarted === undefined) &&
+      (quest.dateCompleted === null || quest.dateCompleted === undefined))
+    .map((quest) => _formatAutocompleteQuest(quest));
+}
+
+
+async function autocompleteGetStoppableQuestIds(
+  app: BotApplication,
+  interaction
+) {
+  const quests = await api.getChannelQuests(interaction.channel.id);
+  //sort by most recent first
+  quests.sort((a, b) => {
+    return getTime(b.dateCreated) - getTime(a.dateCreated);
+  });
+  return quests
+    .filter((quest) =>
+      (quest.dateDeleted === null || quest.dateDeleted === undefined) &&
+      (quest.dateStarted !== null && quest.dateStarted !== undefined)
+    )
+    .map((quest) => _formatAutocompleteQuest(quest));
+}
+
 async function autocompleteGetDeletableQuestIds(
   app: BotApplication,
   interaction
@@ -1345,10 +1575,13 @@ async function autocompleteGetCompletableQuestIds(
   return quests
     .filter(
       (quest) =>
-        quest.dateCompleted === undefined ||
-        quest.dateCompleted === null ||
-        quest.repeat ||
-        isCompletedDailyQuestObsolete(quest)
+        (quest.dateDeleted === null || quest.dateDeleted === undefined) &&
+        (
+          quest.dateCompleted === undefined ||
+          quest.dateCompleted === null ||
+          quest.repeat ||
+          isCompletedDailyQuestObsolete(quest)
+        )
     )
     .map((quest) => _formatAutocompleteQuest(quest));
 }
@@ -1363,7 +1596,10 @@ async function autocompleteGetCompletedQuestIds(
     return getTime(b.dateCreated) - getTime(a.dateCreated);
   });
   return quests
-    .filter((quest) => quest.dateCompleted !== undefined)
+    .filter((quest) =>
+      (quest.dateDeleted !== null && quest.dateDeleted !== undefined) &&
+      (quest.dateCompleted !== undefined && quest.dateCompleted !== null)
+    )
     .map((quest) => _formatAutocompleteQuest(quest));
 }
 
@@ -1383,30 +1619,6 @@ async function autocompleteGetAllChannelsWithQuests(
   return channels;
 }
 
-//return all current interaction guild 's channels
-async function autocompleteGetAllChannels(app: BotApplication, interaction) {
-  //get current interaction guild 's channels list
-  const channels = app.client.channels.cache.filter(async (channel) => {
-    //filter channels
-    return (
-      channel.type === 0 && //text channel
-      interaction.guild.id === channel.guildId //same guild
-    );
-  });
-  return channels.map((channel) => _formatAutocompleteChannel(channel));
-}
-
-async function autocompleteGetAllUsers(app: BotApplication, interaction) {
-  const users = app.client.users.cache;
-  return users.map(async (user) => {
-    //need fetch ?
-    if (user.partial) {
-      await user.fetch();
-    }
-    _formatAutocompleteUser(user);
-  });
-}
-
 /* Command Methods */
 
 async function commandSettingsAnnounceCreate(app: BotApplication, interaction) {
@@ -1421,9 +1633,8 @@ async function commandSettingsAnnounceCreate(app: BotApplication, interaction) {
         .toLocaleUpperCase()}!`,
       ephemeral: true,
     });
-    const loggerMsg = `User ${
-      interaction.member
-    } set ANNOUNCE_CREATE setting to ${value.toString().toLocaleUpperCase()}`;
+    const loggerMsg = `User ${interaction.member
+      } set ANNOUNCE_CREATE setting to ${value.toString().toLocaleUpperCase()}`;
     app.logger.info(loggerMsg);
   } catch (error) {
     app.logger.error(error);
@@ -1442,9 +1653,8 @@ async function commandSettingsAnnounceUpdate(app: BotApplication, interaction) {
         .toLocaleUpperCase()}!`,
       ephemeral: true,
     });
-    const loggerMsg = `User ${
-      interaction.user.username
-    } set ANNOUNCE_UPDATE setting to ${value.toString().toLocaleUpperCase()}`;
+    const loggerMsg = `User ${interaction.user.username
+      } set ANNOUNCE_UPDATE setting to ${value.toString().toLocaleUpperCase()}`;
     app.logger.info(loggerMsg);
   } catch (error) {
     app.logger.error(error);
@@ -1466,14 +1676,60 @@ async function commandSettingsAnnounceComplete(
         .toLocaleUpperCase()}!`,
       ephemeral: true,
     });
-    const loggerMsg = `User ${
-      interaction.member
-    } set ANNOUNCE_COMPLETE setting to ${value.toString().toLocaleUpperCase()}`;
+    const loggerMsg = `User ${interaction.member
+      } set ANNOUNCE_COMPLETE setting to ${value.toString().toLocaleUpperCase()}`;
     app.logger.info(loggerMsg);
   } catch (error) {
     app.logger.error(error);
   }
 }
+
+async function commandSettingsAnnounceStart(
+  app: BotApplication,
+  interaction
+) {
+  const value = interaction.options.getBoolean('value');
+  try {
+    const settings = await api.getUserSettings(interaction.user.id);
+    settings.ANNOUNCE_START = value;
+    await api.setUserSettings(interaction.user.id, settings);
+    interaction.reply({
+      content: `Paramètre ANNOUNCE_START mis à jour sur ${value
+        .toString()
+        .toLocaleUpperCase()}!`,
+      ephemeral: true,
+    });
+    const loggerMsg = `User ${interaction.member
+      } set ANNOUNCE_START setting to ${value.toString().toLocaleUpperCase()}`;
+    app.logger.info(loggerMsg);
+  } catch (error) {
+    app.logger.error(error);
+  }
+}
+
+async function commandSettingsAnnounceStop(
+  app: BotApplication,
+  interaction
+) {
+  const value = interaction.options.getBoolean('value');
+  try {
+    const settings = await api.getUserSettings(interaction.user.id);
+    settings.ANNOUNCE_STOP = value;
+    await api.setUserSettings(interaction.user.id, settings);
+    interaction.reply({
+      content: `Paramètre ANNOUNCE_STOP mis à jour sur ${value
+        .toString()
+        .toLocaleUpperCase()}!`,
+      ephemeral: true,
+    });
+    const loggerMsg = `User ${interaction.member
+      } set ANNOUNCE_STOP setting to ${value.toString().toLocaleUpperCase()}`;
+    app.logger.info(loggerMsg);
+  } catch (error) {
+    app.logger.error(error);
+  }
+}
+
 
 async function commandSettingsAnnounceUncomplete(
   app: BotApplication,
@@ -1490,11 +1746,10 @@ async function commandSettingsAnnounceUncomplete(
         .toLocaleUpperCase()}!`,
       ephemeral: true,
     });
-    const loggerMsg = `User ${
-      interaction.user.username
-    } set ANNOUNCE_UNCOMPLETE setting to ${value
-      .toString()
-      .toLocaleUpperCase()}`;
+    const loggerMsg = `User ${interaction.user.username
+      } set ANNOUNCE_UNCOMPLETE setting to ${value
+        .toString()
+        .toLocaleUpperCase()}`;
     app.logger.info(loggerMsg);
   } catch (error) {
     app.logger.error(error);
@@ -1513,9 +1768,8 @@ async function commandSettingsAnnounceDelete(app: BotApplication, interaction) {
         .toLocaleUpperCase()}!`,
       ephemeral: true,
     });
-    const loggerMsg = `User ${
-      interaction.user.username
-    } set ANNOUNCE_DELETE setting to ${value.toString().toLocaleUpperCase()}`;
+    const loggerMsg = `User ${interaction.user.username
+      } set ANNOUNCE_DELETE setting to ${value.toString().toLocaleUpperCase()}`;
     app.logger.info(loggerMsg);
   } catch (error) {
     app.logger.error(error);
@@ -1537,9 +1791,8 @@ async function commandSettingsAnnounceUndelete(
         .toLocaleUpperCase()}!`,
       ephemeral: true,
     });
-    const loggerMsg = `User ${
-      interaction.member
-    } set ANNOUNCE_UNDELETE setting to ${value.toString().toLocaleUpperCase()}`;
+    const loggerMsg = `User ${interaction.member
+      } set ANNOUNCE_UNDELETE setting to ${value.toString().toLocaleUpperCase()}`;
     app.logger.info(loggerMsg);
   } catch (error) {
     app.logger.error(error);
@@ -1556,9 +1809,8 @@ async function commandSettingsPublicName(app: BotApplication, interaction) {
       content: `Paramètre PUBLIC_NAME mis à jour sur ${value}!`,
       ephemeral: true,
     });
-    const loggerMsg = `User ${
-      interaction.member
-    } set PUBLIC_NAME setting to ${value.toString().toLocaleUpperCase()}`;
+    const loggerMsg = `User ${interaction.member
+      } set PUBLIC_NAME setting to ${value.toString().toLocaleUpperCase()}`;
     app.logger.info(loggerMsg);
   } catch (error) {
     app.logger.error(error);
@@ -1575,9 +1827,8 @@ async function commandSettingsPublicAvatar(app: BotApplication, interaction) {
       content: `Paramètre PUBLIC_AVATAR mis à jour sur ${value}!`,
       ephemeral: true,
     });
-    const loggerMsg = `User ${
-      interaction.member
-    } set PUBLIC_AVATAR setting to ${value.toString().toLocaleUpperCase()}`;
+    const loggerMsg = `User ${interaction.member
+      } set PUBLIC_AVATAR setting to ${value.toString().toLocaleUpperCase()}`;
     app.logger.info(loggerMsg);
   } catch (error) {
     app.logger.error(error);
@@ -1745,8 +1996,7 @@ module.exports = {
     const subcommand = interaction.options.getSubcommand();
     const commandgroup = interaction.options.getSubcommandGroup();
     app.logger.debug(
-      `Commande ${subcommand}${
-        commandgroup != null ? ` (du groupe ${commandgroup})` : ''
+      `Commande ${subcommand}${commandgroup != null ? ` (du groupe ${commandgroup})` : ''
       } lancée par ${interaction.user.username}`
     );
     switch (commandgroup) {
@@ -1764,6 +2014,10 @@ module.exports = {
             return await commandList(app, interaction);
           //case 'showlist':
           //  return await commandList(app, interaction, false);
+          case 'start':
+            return await commandStart(app, interaction);
+          case 'stop':
+            return await commandStop(app, interaction);
           case 'complete':
             return await commandComplete(app, interaction);
           case 'uncomplete':
@@ -1854,23 +2108,13 @@ module.exports = {
           choices = await autocompleteGetCompletedQuestIds(app, interaction);
         } else if (subcommand === 'complete') {
           choices = await autocompleteGetCompletableQuestIds(app, interaction);
-        } else {
+        } else if (subcommand === 'start') {
+          choices = await autocompleteGetStartableQuestIds(app, interaction);
+        } else if (subcommand === 'stop') {
+          choices = await autocompleteGetStoppableQuestIds(app, interaction);
+        } else if (subcommand === 'delete') {
           choices = await autocompleteGetDeletableQuestIds(app, interaction);
         }
-        break;
-      case 'channel':
-        //check subcommand
-        if (subcommand === 'showlist' || subcommand === 'list') {
-          choices = await autocompleteGetAllChannelsWithQuests(
-            app,
-            interaction
-          );
-        } else {
-          choices = await autocompleteGetAllChannels(app, interaction);
-        }
-        break;
-      case 'user':
-        choices = await autocompleteGetAllUsers(app, interaction);
         break;
       default:
         break;
