@@ -5,14 +5,15 @@ ENV EDITOR nano
 
 WORKDIR /app
 
+#cache dependencies
+COPY package*.json ./
+RUN npm ci
+
 COPY . .
 
-RUN npm ci \
-&& npm run build \
-&& rm -rf node_modules
-
-#prod node modules + run register commands
-RUN npm ci --omit=dev
+RUN npm run build \
+&& rm -rf node_modules \
+&& npm ci --omit=dev
 
 FROM builder AS register
 

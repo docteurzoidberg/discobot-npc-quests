@@ -58,3 +58,4 @@ const rest = new REST({ version: '9' }).setToken(BOT_TOKEN);
     process.exit(1);
   }
 })();
+
