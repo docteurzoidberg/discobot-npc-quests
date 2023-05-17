@@ -1,51 +1,51 @@
-require('dotenv').config();
+require("dotenv").config();
 
-const fs = require('fs');
+const fs = require("fs");
 
-const DATA_PATH = process.env.DATA_PATH || './data';
+const DATA_PATH = process.env.DATA_PATH || "./data";
 
 const DB_PATH = `${DATA_PATH}/users`;
 const DB_VERSION = 1;
 
 const _checkUserId = (userId) => {
   if (!userId) {
-    throw new Error('userId is required');
+    throw new Error("userId is required");
   }
   //should be numeric
   if (isNaN(userId)) {
-    throw new Error('userId must be numeric');
+    throw new Error("userId must be numeric");
   }
 };
 
 const _checkSettings = (settings) => {
   if (!settings) {
-    throw new Error('settings is required');
+    throw new Error("settings is required");
   }
   //should be an object
-  if (typeof settings !== 'object') {
-    throw new Error('settings must be an object');
+  if (typeof settings !== "object") {
+    throw new Error("settings must be an object");
   }
 };
 
 const _checkUserDb = (db) => {
   if (!db) {
-    throw new Error('db is required');
+    throw new Error("db is required");
   }
   //should be an object
-  if (typeof db !== 'object') {
-    throw new Error('db must be an object');
+  if (typeof db !== "object") {
+    throw new Error("db must be an object");
   }
   //should have a version
   if (!db.version) {
-    throw new Error('db must have a version');
+    throw new Error("db must have a version");
   }
   //should have a dateCreated
   if (!db.dateCreated) {
-    throw new Error('db must have a dateCreated');
+    throw new Error("db must have a dateCreated");
   }
   //should have settings
   if (!db.settings) {
-    throw new Error('db must have settings');
+    throw new Error("db must have settings");
   }
 };
 
@@ -62,9 +62,9 @@ const defaultUserSettings = {
   ANNOUNCE_REMOVE_TAG: false,
   ANNOUNCE_ADD_PLAYER: false,
   ANNOUNCE_REMOVE_PLAYER: false,
-  PUBLIC_NAME: 'Not set',
-  PUBLIC_AVATAR: '',
-  PUBLIC_MEMBER: '<Not set>',
+  PUBLIC_NAME: "Not set",
+  PUBLIC_AVATAR: "",
+  PUBLIC_MEMBER: "<Not set>",
 };
 
 async function _loadUserDatabase(userId) {
@@ -82,7 +82,7 @@ async function _loadUserDatabase(userId) {
   }
 
   //read from file
-  const json = await fs.promises.readFile(databaseFile, 'utf8');
+  const json = await fs.promises.readFile(databaseFile, "utf8");
   let db = {};
   try {
     //parse json
@@ -122,9 +122,9 @@ async function getUserIds() {
   }
   const files = await fs.promises.readdir(DB_PATH);
   for (const file of files) {
-    const userId = file.split('.')[0];
-    const ext = file.split('.')[1];
-    if (ext === 'json') userIds.push(userId);
+    const userId = file.split(".")[0];
+    const ext = file.split(".")[1];
+    if (ext === "json") userIds.push(userId);
   }
   return userIds;
 }
@@ -140,9 +140,9 @@ async function getUsers() {
     users.push({
       id: userIds[i],
       dateCreated: db.dateCreated,
-      name: db.settings.PUBLIC_NAME || 'John Doe',
-      avatar: db.settings.PUBLIC_AVATAR || 'https://i.imgur.com/0y0y0y0.png',
-      member: db.settings.PUBLIC_MEMBER || '<Member not set>',
+      name: db.settings.PUBLIC_NAME || "John Doe",
+      avatar: db.settings.PUBLIC_AVATAR || "https://i.imgur.com/0y0y0y0.png",
+      member: db.settings.PUBLIC_MEMBER || "<Member not set>",
     });
   }
   return users;

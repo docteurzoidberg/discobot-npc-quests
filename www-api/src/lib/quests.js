@@ -1,19 +1,19 @@
-require('dotenv').config({
-  path: '../../.env' + (process.env.NODE_ENV ? '.' + process.env.NODE_ENV : ''),
+require("dotenv").config({
+  path: "../../.env" + (process.env.NODE_ENV ? "." + process.env.NODE_ENV : ""),
 });
 
-const fs = require('fs');
+const fs = require("fs");
 
-const databasePath = process.env.DATA_PATH || './data';
+const databasePath = process.env.DATA_PATH || "./data";
 
 const _checkQuest = (quest) => {
-  if (!quest) throw new Error('No quest found');
-  if (!quest.id) throw new Error('No quest.id found');
+  if (!quest) throw new Error("No quest found");
+  if (!quest.id) throw new Error("No quest.id found");
 };
 
 const _checkTag = (tag) => {
   //tag should be a string
-  if (typeof tag !== 'string') {
+  if (typeof tag !== "string") {
     throw new Error(`tag is not a string: ${tag}`);
   }
 
@@ -32,46 +32,46 @@ const _checkTag = (tag) => {
 };
 
 const _checkChannelDatabase = (db) => {
-  if (!db) throw new Error('No database found');
-  if (!db.quests) throw new Error('No database.quests found');
+  if (!db) throw new Error("No database found");
+  if (!db.quests) throw new Error("No database.quests found");
 };
 
 const _checkChannelId = (channelId) => {
-  if (!channelId) throw new Error('No channelId provided');
+  if (!channelId) throw new Error("No channelId provided");
   if (!channelId.match(/^[0-9]+$/))
-    throw new Error('Invalid channelId provided: ' + channelId);
+    throw new Error("Invalid channelId provided: " + channelId);
 };
 
 const _checkQuestId = (questId) => {
-  if (!questId) throw new Error('No questId provided');
+  if (!questId) throw new Error("No questId provided");
   //quest id is a 2 or more char string
   if (!questId.match(/^[a-zA-Z0-9]{2,}$/))
-    throw new Error('Invalid questId provided');
+    throw new Error("Invalid questId provided");
 };
 
 const _checkUserId = (userId) => {
-  if (!userId) throw new Error('No userId provided');
+  if (!userId) throw new Error("No userId provided");
   //quest id is a 2 or more char string
   if (!userId.match(/^[a-zA-Z0-9]{2,}$/))
-    throw new Error('Invalid userId provided');
+    throw new Error("Invalid userId provided");
 };
 
 const _checkQuestObject = (questObject) => {
-  if (!questObject) throw new Error('No questObject provided');
-  if (!questObject.quest) throw new Error('No questObject.quest provided');
+  if (!questObject) throw new Error("No questObject provided");
+  if (!questObject.quest) throw new Error("No questObject.quest provided");
   //_checkQuest(questObject.quest);
 };
 
 const _checkTagObject = (tagObject) => {
-  if (!tagObject) throw new Error('No tagObject provided');
-  if (!tagObject.tag) throw new Error('No tagObject.tag provided');
+  if (!tagObject) throw new Error("No tagObject provided");
+  if (!tagObject.tag) throw new Error("No tagObject.tag provided");
   _checkTag(tagObject.tag);
 };
 
 function _generateID(index) {
   let numChars = 2; // number of characters in ID
-  let charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; // character set for ID
-  let id = ''; // initialize ID string
+  let charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"; // character set for ID
+  let id = ""; // initialize ID string
   index += charset.length;
   while (index >= 0) {
     let digit = index % charset.length; // get current digit
@@ -82,7 +82,7 @@ function _generateID(index) {
     if (digit === charset.length - 1) {
       numChars++;
     }
-    charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.repeat(numChars); // update character set for longer IDs
+    charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".repeat(numChars); // update character set for longer IDs
   }
   return id;
 }
@@ -116,7 +116,7 @@ async function _getNextUnusedGlobalQuestId() {
 
 async function getChannelsIds() {
   const channelFiles = fs.readdirSync(`${databasePath}/quests`);
-  const channelIds = channelFiles.map((file) => file.replace('.json', ''));
+  const channelIds = channelFiles.map((file) => file.replace(".json", ""));
   //filter valid channel ids
   return channelIds.filter((channelId) => channelId.match(/^[0-9]+$/));
 }
@@ -128,7 +128,7 @@ async function _loadChannelDatabase(channelId) {
     await _saveChannelDatabase(channelId, { quests: [] });
   }
 
-  const json = await fs.promises.readFile(databaseFile, 'utf8');
+  const json = await fs.promises.readFile(databaseFile, "utf8");
   let db = {};
   try {
     db = JSON.parse(json);
