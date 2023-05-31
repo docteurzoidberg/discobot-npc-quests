@@ -1,5 +1,4 @@
-import { BotApplication } from '../types/BotApplication';
-
+import BotApplication from 'drz-ts-botapplication';
 module.exports = {
   name: 'interactionCreate',
   async execute(app: BotApplication, interaction) {
@@ -18,7 +17,7 @@ module.exports = {
       if (!command.execute) return;
       try {
         await command.execute(app, interaction);
-      } catch (error) {
+      } catch (error: any) {
         app.logger.error(error);
         app.logger.debug(error.stack);
         await interaction.reply({
@@ -35,7 +34,7 @@ module.exports = {
       if (!command.autocomplete) return;
       try {
         await command.autocomplete(app, interaction);
-      } catch (error) {
+      } catch (error: any) {
         app.logger.error(error);
         app.logger.debug(error.stack);
         //await interaction.reply({ content: 'There was an error while executing autocomplete for this command!', ephemeral: true });

@@ -1,0 +1,27 @@
+#dev dependencies. for building
+FROM registry.gitlab.com/drz-docker-images/drz-botapplication-builder:latest AS builder
+WORKDIR /app
+
+#cache libs
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+
+#build
+COPY . .
+RUN pnpm build
+
+#prod dependencies. for running
+FROM registry.gitlab.com/drz-docker-images/drz-botapplication-runner:latest
+WORKDIR /app
+
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile --prod
+
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/deps/drz-ts-botapplication /deps/drz-ts-botapplication 
+
+RUN cd /deps/drz-ts-botapplication && pnpm link -g && cd /app && pnpm link drz-ts-botapplication -g
+
+
+
+

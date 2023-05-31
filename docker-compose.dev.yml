@@ -4,59 +4,50 @@ networks:
 
 services:
   api:
-    image: npc-quests-api
+    image: npc-quests-api:dev
     hostname: npc-quests-api
     container_name: npc-quests-api
     tty: true
     build:
       context: ./www-api
-    environment:
-      - DATA_PATH=/data
+      dockerfile: Dockerfile.dev
+    env_file:
+      - ./www-api/.env.dev
     networks:
       - npc-quests
+    #uncomment to test live from host on the api
+    ports:
+      - 5000:5000
     volumes:
-      - ./www-api/data:/data
+      - ./www-api:/app # mount the current directory on the host to the container
+      - /app/node_modules # but not the node_modules folder
+      - ../../drz-ts-botapplication:/app/node_modules/drz-ts-botapplication
+    command: pnpm dev
     restart: unless-stopped
 
   bot:
-    image: npc-quests-bot
+    image: npc-quests-bot:dev
     hostname: npc-quests-bot
     container_name: npc-quests-bot
     tty: true
     build:
       context: ./bot-quests
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     env_file:
-      - ./bot-achievements/.env.production
-    environment:
-      #overide api url in env file to use the docker container
-      - API_URL=http://npc-quests-api:5000/quest
+      - ./bot-quests/.env.dev
     networks:
       - npc-quests
     volumes:
-      - ./bot-quests/data:/data
-    depends_on:
-      - api
-    restart: unless-stopped
-
-  cronjobs:
-    image: npc-quests-cronjobs
-    hostname: npc-quests-cronjobs
-    container_name: npc-quests-cronjobs
-    tty: true
-    build:
-      context: ./bot-quests
-      dockerfile: Dockerfile.cronjobs
-    environment:
-      - API_URL=http://npc-quests-api:5000
-    networks:
-      - npc-quests
+      - ./bot-quests:/app # mount the current directory on the host to the container
+      - /app/node_modules # but not the node_modules folder
+      - ../../drz-ts-botapplication:/app/node_modules/drz-ts-botapplication
+    command: pnpm dev
     depends_on:
       - api
     restart: unless-stopped
 
   www:
-    image: npc-quests-www
+    image: npc-quests-www:dev
     hostname: npc-quests-www
     container_name: npc-quests-www
     tty: true

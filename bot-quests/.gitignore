@@ -5,4 +5,5 @@ data
 .env.*
 !.env.sample
 dist/
+deps/
 tsconfig.tsbuildinfo

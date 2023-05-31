@@ -1,7 +1,6 @@
-import { BotApplication } from '../types/BotApplication';
+import BotApplication from 'drz-ts-botapplication';
 
-const { SlashCommandBuilder } = require('@discordjs/builders');
-const { EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
 const api = require('../lib/quests-api');
 const dalle = require('../lib/openai-dall-e');
@@ -947,7 +946,7 @@ async function commandAdd(app: BotApplication, interaction) {
   let deferred = false;
 
   //Autogen images with dall-e?
-  if (app.config.USE_DALLE && (image === '' || icon === '')) {
+  if (app.opts?.appConfig?.USE_DALLE && (image === '' || icon === '')) {
     const prompt = _generateDallePrompt(title);
 
     //take long time so tell discord
@@ -1006,7 +1005,7 @@ async function commandAdd(app: BotApplication, interaction) {
         ephemeral: true,
       });
     }
-  } catch (error) {
+  } catch (error: any) {
     app.logger.error('Erreur lors de la commande add');
     app.logger.debug(error.message);
     app.logger.debug(error.stack);
@@ -1076,7 +1075,7 @@ async function commandUpdate(app: BotApplication, interaction) {
     const updatedQuest = await api.updateChannelQuest(channelId, id, quest);
     app.logger.debug(updatedQuest);
     interaction.reply({ content: `Quête [${id}] modifiée !`, ephemeral: true });
-  } catch (error) {
+  } catch (error: any) {
     app.logger.error(`Erreur lors de la commande update`);
     app.logger.debug(error.message);
     app.logger.debug(error.stack);
@@ -1125,7 +1124,7 @@ async function commandShow(app: BotApplication, interaction, ephemeral = true) {
       embeds: [embed],
       ephemeral: ephemeral === true,
     });
-  } catch (error) {
+  } catch (error: any) {
     app.logger.error(
       'Erreur lors de la commande ' + (ephemeral ? 'info' : 'show')
     );
@@ -1192,7 +1191,7 @@ async function commandList(app: BotApplication, interaction) {
       content: msg,
       ephemeral: ephemeral,
     });
-  } catch (error) {
+  } catch (error: any) {
     app.logger.error('Erreur lors de la commande ' + 'list', error);
     app.logger.debug(error.message);
     app.logger.debug(error.stack);
@@ -1265,7 +1264,7 @@ async function commandStart(app: BotApplication, interaction) {
       });
     }
   }
-  catch (error) {
+  catch (error: any) {
     app.logger.error('Erreur lors de la commande start');
     app.logger.debug(error.message);
     app.logger.debug(error.stack);
@@ -1342,7 +1341,7 @@ async function commandStop(app: BotApplication, interaction) {
       });
     }
   }
-  catch (error) {
+  catch (error: any) {
     app.logger.error('Erreur lors de la commande stop');
     app.logger.debug(error.message);
     app.logger.debug(error.stack);
@@ -1416,7 +1415,7 @@ async function commandComplete(app: BotApplication, interaction) {
         ],
       });
     }
-  } catch (error) {
+  } catch (error: any) {
     app.logger.error('Erreur lors de la commande complete');
     app.logger.debug(error.message);
     app.logger.debug(error.stack);
@@ -1442,7 +1441,7 @@ async function commandDelete(app: BotApplication, interaction) {
       )} supprimée !`,
       ephemeral: true,
     });
-  } catch (error) {
+  } catch (error: any) {
     app.logger.error(`Erreur lors de la commande delete`);
     app.logger.debug(error.message);
     app.logger.debug(error.stack);
@@ -1468,7 +1467,7 @@ async function commandUncomplete(app: BotApplication, interaction) {
       )} invalidée !`,
       ephemeral: true,
     });
-  } catch (error) {
+  } catch (error: any) {
     app.logger.error(`Erreur lors de la commande uncomplete`);
     app.logger.debug(error.message);
     app.logger.debug(error.stack);
@@ -1494,7 +1493,7 @@ async function commandUndelete(app: BotApplication, interaction) {
       )} restaurée !`,
       ephemeral: true,
     });
-  } catch (error) {
+  } catch (error: any) {
     app.logger.error(`Erreur lors de la commande undelete`);
     app.logger.debug(error.message);
     app.logger.debug(error.stack);
@@ -1879,7 +1878,7 @@ async function commandSettingsList(app: BotApplication, interaction) {
       )} : ${_formatSettings(settings)}`,
       ephemeral: true,
     });
-  } catch (error) {
+  } catch (error: any) {
     app.logger.error(`Erreur lors de la commande settings list`);
     app.logger.debug(error.message);
     app.logger.debug(error.stack);
@@ -1907,7 +1906,7 @@ async function commandPlayerAdd(app: BotApplication, interaction) {
       )} ajouté à la quête ${questId}!`,
       ephemeral: true,
     });
-  } catch (error) {
+  } catch (error: any) {
     app.logger.error(`Erreur lors de la commande player add`);
     app.logger.debug(error.message);
     app.logger.debug(error.stack);
@@ -1937,7 +1936,7 @@ async function commandPlayerRemove(app: BotApplication, interaction) {
       )} retiré de la quête ${questId}!`,
       ephemeral: true,
     });
-  } catch (error) {
+  } catch (error: any) {
     app.logger.error(`Erreur lors de la commande player remove`);
     app.logger.debug(error.message);
     app.logger.debug(error.stack);
@@ -1961,7 +1960,7 @@ const commandTagAdd = async (app: BotApplication, interaction) => {
       content: `Tag ${tag} ajouté à la quête ${questId}!`,
       ephemeral: true,
     });
-  } catch (error) {
+  } catch (error: any) {
     app.logger.error(`Erreur lors de la commande tag add`);
     app.logger.debug(error.message);
     app.logger.debug(error.stack);
@@ -1986,7 +1985,7 @@ const commandTagRemove = async (app: BotApplication, interaction) => {
       content: `Tag ${tag} retiré de la quête ${questId}!`,
       ephemeral: true,
     });
-  } catch (error) {
+  } catch (error: any) {
     app.logger.error(`Erreur lors de la commande tag remove`);
     app.logger.debug(error.message);
     app.logger.debug(error.stack);
@@ -2011,7 +2010,7 @@ const commandTagList = async (app: BotApplication, interaction) => {
       content: `Tags de la quête ${questId} : ${tags.join(', ')}`,
       ephemeral: true,
     });
-  } catch (error) {
+  } catch (error: any) {
     app.logger.error(`Erreur lors de la commande tag list`);
     app.logger.debug(error.message);
     app.logger.debug(error.stack);

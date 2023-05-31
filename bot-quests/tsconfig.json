@@ -1,24 +1,14 @@
 {
+  "extends": "@tsconfig/node18/tsconfig.json",
   "compilerOptions": {
-    /* Docs: [https://www.typescriptlang.org/tsconfig](https://www.typescriptlang.org/tsconfig) */
-    "target": "es5",
-    "module": "commonjs",
-    "outDir": "dist",
-    "rootDir": "src",
-    "strict": true,
     "noImplicitAny": false,
-    "strictNullChecks": true,
-    "checkJs": true,
-    "allowJs": true,
-    "moduleResolution": "node",
-    "types": ["node"],
-    "lib": ["es6"],
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "allowUnreachableCode": true,
-    "useUnknownInCatchVariables": false // TypeScript 4.4+ only!
+    "lib": ["ESNext"],
+    "outDir": "./dist",
+    "paths": {
+      "drz-ts-botapplication": ["./node_modules/drz-ts-botapplication/src"],
+      "drz-ts-botapplication/*": ["./node_modules/drz-ts-botapplication/src/*"]
+    }
   },
-  "include": ["src/**/*.ts", "src/**/*.js"],
-  "exclude": ["node_modules", "<node_internals>/**"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
 }
