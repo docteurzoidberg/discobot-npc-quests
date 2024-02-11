@@ -12,7 +12,7 @@ services:
       context: ./www-api
       dockerfile: Dockerfile.dev
     env_file:
-      - ./www-api/.env.dev
+      - ./www-api/.env
     networks:
       - npc-quests
     #uncomment to test live from host on the api

@@ -24,7 +24,6 @@ const basePath = process.env.BASE_PATH || process.cwd() || __dirname;
 import { GatewayIntentBits, Partials } from 'discord.js';
 import { BotApplicationOptions } from 'drz-ts-botapplication/src/types/BotApplicationOptions';
 
-
 const appEnv = {
   API_URL: process.env.API_URL || '',
   TPPT_URL: process.env.TPPT_URL || ''

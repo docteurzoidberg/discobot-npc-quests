@@ -163,12 +163,18 @@ const commands = new SlashCommandBuilder()
     subcommand
       .setName('list')
       .setDescription('Lister les quêtes du channel/thread')
-      .addStringOption((option) =>
+      .addChannelOption((option) =>
+        option
+          .setName('channel')
+          .setDescription(
+            'Choisir un autre channel/thread que celui de la commande')
+          .setRequired(false))
+      .addUserOption((option) =>
         option
           .setName('user')
           .setDescription('Filter par nom du joueur')
           .setRequired(false)
-          .setAutocomplete(true)
+        //.setAutocomplete(true)
       )
       .addStringOption((option) =>
         option
@@ -177,12 +183,10 @@ const commands = new SlashCommandBuilder()
           .setRequired(false)
           .setAutocomplete(true)
       )
-      .addChannelOption((option) =>
+      .addBooleanOption((option) =>
         option
-          .setName('channel')
-          .setDescription(
-            'Choisir un autre channel/thread que celui de la commande'
-          )
+          .setName('others')
+          .setDescription('Afficher les quetes des autres ?')
           .setRequired(false)
       )
       .addBooleanOption((option) =>

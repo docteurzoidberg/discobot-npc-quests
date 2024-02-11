@@ -199,6 +199,14 @@ async function getChannelQuestById(channelId, questId) {
   return db.quests.find((a) => a.id.toLowerCase() === questId.toLowerCase());
 }
 
+async function getChannelPlayerQuests(channelId, userId) {
+  _checkChannelId(channelId);
+  _checkUserId(userId);
+  const db = await _loadChannelDatabase(channelId);
+  _checkChannelDatabase(db);
+  return db.quests.filter((a) => a.players.includes(userId));
+}
+
 async function getChannelQuests(channelId) {
   _checkChannelId(channelId);
   const db = await _loadChannelDatabase(channelId);
@@ -533,6 +541,7 @@ module.exports = {
   getChannelQuestById,
   getChannelQuests,
   getChannelPublicQuests,
+  getChannelPlayerQuests,
   addChannelQuest,
   updateChannelQuest,
   startChannelQuest,

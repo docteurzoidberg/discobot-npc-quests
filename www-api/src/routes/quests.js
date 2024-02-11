@@ -17,12 +17,12 @@
   getChannelQuests
 */
 
-const questsdb = require('../lib/quests');
+const questsdb = require("../lib/quests");
 
 const getChannelQuestById = async (req, res) => {
   const { channelId, questId } = req.params;
   const quest = await questsdb.getChannelQuestById(channelId, questId);
-  if (!quest) return res.status(404).send('Quest not found');
+  if (!quest) return res.status(404).send("Quest not found");
   res.json(quest);
 };
 
@@ -110,6 +110,12 @@ const getChannelQuests = async (req, res) => {
   res.json(quests);
 };
 
+const getChannelPlayerQuests = async (req, res) => {
+  const { channelId, userId } = req.params;
+  const quests = await questsdb.getChannelPlayerQuests(channelId, userId);
+  res.json(quests);
+};
+
 const resetDailyQuests = async (req, res) => {
   const quests = await questsdb.resetDailyQuests();
   res.json(quests);
@@ -137,33 +143,34 @@ const removePlayerFromQuest = async (req, res) => {
   res.json(quest);
 };
 
-const router = require('express').Router();
+const router = require("express").Router();
 
-router.post('/reset', resetDailyQuests);
+router.post("/reset", resetDailyQuests);
 
-router.get('/:channelId/:questId', getChannelQuestById);
+router.get("/:channelId/:questId", getChannelQuestById);
 
-router.put('/:channelId/:questId', updateChannelQuest);
-router.delete('/:channelId/:questId', deleteChannelQuest);
+router.put("/:channelId/:questId", updateChannelQuest);
+router.delete("/:channelId/:questId", deleteChannelQuest);
 
-router.put('/:channelId/:questId/addplayer/:userId', addPlayerToQuest);
+router.put("/:channelId/:questId/addplayer/:userId", addPlayerToQuest);
 router.delete(
-  '/:channelId/:questId/removeplayer/:userId',
+  "/:channelId/:questId/removeplayer/:userId",
   removePlayerFromQuest
 );
 
-router.put('/:channelId/:questId/start/:userId', startChannelQuest);
-router.put('/:channelId/:questId/stop/:userId', stopChannelQuest);
+router.put("/:channelId/:questId/start/:userId", startChannelQuest);
+router.put("/:channelId/:questId/stop/:userId", stopChannelQuest);
 
-router.put('/:channelId/:questId/complete/:userId', completeChannelQuest);
-router.put('/:channelId/:questId/uncomplete', uncompleteChannelQuest);
-router.put('/:channelId/:questId/undelete', undeleteChannelQuest);
-router.post('/:channelId/:questId/tag', addTagToChannelQuest);
-router.delete('/:channelId/:questId/tag', removeTagFromChannelQuest);
+router.put("/:channelId/:questId/complete/:userId", completeChannelQuest);
+router.put("/:channelId/:questId/uncomplete", uncompleteChannelQuest);
+router.put("/:channelId/:questId/undelete", undeleteChannelQuest);
+router.post("/:channelId/:questId/tag", addTagToChannelQuest);
+router.delete("/:channelId/:questId/tag", removeTagFromChannelQuest);
 
-router.get('/:channelId/public', getChannelPublicQuests);
-router.get('/:channelId', getChannelQuests);
-router.post('/:channelId', addChannelQuest);
+router.get("/:channelId/player/:playerId", getChannelPlayerQuests);
+router.get("/:channelId/public", getChannelPublicQuests);
+router.get("/:channelId", getChannelQuests);
+router.post("/:channelId", addChannelQuest);
 
 //router.post('/:channelId/reset', resetChannelDailyQuests);
 module.exports = router;

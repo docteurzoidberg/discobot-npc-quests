@@ -66,9 +66,17 @@ export async function setUserSettings(userId, settings) {
   }
 }
 
-//TODO: write wrapper for all quest api methods
 export async function getChannelQuests(channelId) {
   const response = await fetch(`${API_URL}/quests/${channelId}`);
+  if (response.ok) {
+    return await response.json();
+  } else {
+    throw new Error(`API error: ${response.status} ${response.statusText}`);
+  }
+}
+
+export async function getChannelPlayerQuests(channelId, userId) {
+  const response = await fetch(`${API_URL}/quests/${channelId}/player/${userId}}`);
   if (response.ok) {
     return await response.json();
   } else {

@@ -9,7 +9,7 @@
     "clean:deps": "rm -rf ./deps",
     "build": "pnpm clean:dist && swc ./src -d ./dist",
     "build:deps": "cd /home/drzoid/dev/discobots/libs/drz-ts-botapplication && npm run build",
-    "docker:deps": "pnpm clean:deps && pnpm build:deps && mkdir ./deps && cp -r /home/drzoid/dev/discobots/drz-ts-botapplication ./deps/drz-ts-botapplication",
+    "docker:deps": "pnpm clean:deps && pnpm build:deps && mkdir ./deps && cp -r /home/drzoid/dev/discobots/libs/drz-ts-botapplication ./deps/drz-ts-botapplication",
     "docker:release": "pnpm docker:deps && docker build -f Dockerfile.prod -t registry.gitlab.com/drz-docker-images/discobots/npc-quests-bot:latest .",
     "dev": "pnpm build && pnpm start",
     "start": "node ./dist/index.js",
